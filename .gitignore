@@ -1,0 +1,34 @@
+# --- Python ---
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+
+# --- Node / frontend ---
+node_modules/
+dist/
+.vite/
+coverage/
+
+# --- Environment & secrets ---
+.env
+.env.*
+!.env.example
+
+# --- Astronomical data: never committed ---
+data/**
+!data/**/
+!data/**/.gitkeep
+
+# small, intentional fixtures live with the tests instead
+!pipelines/tests/fixtures/**
+!backend/tests/fixtures/**
+
+# --- OS / editor ---
+.DS_Store
+.idea/
+.vscode/*
+!.vscode/extensions.json
