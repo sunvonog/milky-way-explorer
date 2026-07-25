@@ -1,0 +1,9 @@
+{
+  "source": "iau_csn",
+  "origin": "https://exopla.net",
+  "original_filename": "IAU-Catalog-of-Star-Names.csv",
+  "fetched_at": "20260725T215225Z",
+  "fetched_online": false,
+  "sha256": "1479ce77e13055919a58784d0f6845f2d00f19147a6917dc4f9f2842f6ec49cf",
+  "bytes": 245652
+}
