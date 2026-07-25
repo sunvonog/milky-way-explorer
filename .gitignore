@@ -18,10 +18,16 @@ coverage/
 .env.*
 !.env.example
 
-# --- Astronomical data: never committed ---
+# Small, immutable reference sources ARE vendored for reproducibility.
+# This exception is ONLY for tiny text catalogues. Large or regenerable data
+# (Gaia chunks, processed Parquet, tiles) stays ignored.
 data/**
 !data/**/
 !data/**/.gitkeep
+!data/raw/iau_csn/**
+!data/raw/wgsn_faints/**
+!data/raw/exoplanet_names/**
+pipelines/_inputs/**
 
 # small, intentional fixtures live with the tests instead
 !pipelines/tests/fixtures/**

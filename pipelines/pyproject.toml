@@ -1,0 +1,32 @@
+[project]
+name = "pipelines"
+version = "0.1.0"
+description = "Offline data pipelines for Milky Way Explorer"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "logly>=0.2.1,<0.3",
+    "polars>=1.43.0",
+    "pydantic-settings>=2.14.2",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+    "ruff>=0.16.0",
+    "ty>=0.0.63",
+]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "UP", "B", "SIM", "PTH"]
+
+[tool.ty.rules]
+possibly-unresolved-reference = "error"
+unused-ignore-comment = "warn"
