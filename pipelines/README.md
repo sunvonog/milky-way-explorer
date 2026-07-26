@@ -71,6 +71,8 @@ app/
 
 1. Put pure domain logic in a library module (no logging / decorators).
 2. Wrap steps with `@task` in `app/flows/<name>.py` and compose them under `@flow`.
+   For tasks that run once per source or chunk, pass `key=` so the run summary
+   labels each instance (`resolve_snapshot[iau_csn]`, `fetch_chunk[12]`, …).
 3. Call the new flow from `canonical_build()` in `app/main.py` (or add a
    subcommand for maintainer-only work).
 

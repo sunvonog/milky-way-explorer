@@ -1,10 +1,11 @@
 """Resolve the three naming sources into canonical stars + aliases.
 
 Verified counts against the current snapshot:
-    606 canonical stars (0 duplicate name keys)
+    605 canonical stars (0 duplicate name keys)
     154/154 WGSN_Faints matched (strict subset of IAU-CSN)
-    151/152 exoplanets hosts matched; 'Mazalaai' unmatched -> review table
-    605/606 stars carry HIP or HR for Stage 2 Gaia cross-match
+    163/164 exoplanet hosts matched; 'Mazalaai' unmatched -> review table
+    604/605 stars carry HIP or a designation for Stage 2 Gaia cross-match
+    2875 aliases after dropping empty / placeholder search keys
 """
 
 from __future__ import annotations
@@ -69,7 +70,8 @@ def build_stars(csn: pl.DataFrame, faints: pl.DataFrame) -> pl.DataFrame:
 
     stars = stars.join(enrich, on="name_key", how="left")
 
-    # HIP is complementary between sources: take whichever is present.
+    # Both sources store bare HIP digits (loaders strip any 'HIP ' prefix and
+    # null placeholders). coalesce takes CSN when present, otherwise Faints.
     stars = stars.with_columns(hip=pl.coalesce([pl.col("hip"), pl.col("hip_faints")])).drop(
         "hip_faints"
     )
@@ -146,6 +148,7 @@ def build_aliases(stars: pl.DataFrame) -> pl.DataFrame:
 
     return (
         aliases.with_columns(alias_search_key=_key_col("alias"))
+        .filter(pl.col("alias_search_key") != "")
         .unique(subset=["star_id", "alias_search_key"])
         .sort("star_id", "priority")
     )

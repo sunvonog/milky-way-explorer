@@ -7,7 +7,7 @@ from pathlib import Path
 import pytest
 
 from app.config import override_settings, reset_settings
-from app.runtime.flow import flow, get_run, task
+from app.runtime.flow import flow, get_run, get_task, task
 
 
 @pytest.fixture(autouse=True)
@@ -116,3 +116,75 @@ def test_run_summary_contains_task_records(tmp_path: Path):
         assert Path(ctx.log_path).exists()
 
     run()
+
+
+def test_keyed_task_instances_are_distinct():
+    captured: dict[str, object] = {}
+
+    @task(name="fetch", key="source")
+    def fetch(source: str) -> str:
+        assert get_task() == f"fetch[{source}]"
+        return source
+
+    @flow(name="keyed-flow")
+    def run() -> None:
+        fetch("a")
+        fetch("b")
+        ctx = get_run()
+        assert ctx is not None
+        captured["names"] = [t.name for t in ctx.tasks]
+        captured["instances"] = [t.instance for t in ctx.tasks]
+        captured["keys"] = [t.key for t in ctx.tasks]
+
+    run()
+    assert captured["names"] == ["fetch", "fetch"]
+    assert captured["instances"] == ["fetch[a]", "fetch[b]"]
+    assert captured["keys"] == ["a", "b"]
+
+
+def test_keyed_task_resolves_keyword_and_default():
+    captured: list[str] = []
+
+    @task(name="fetch", key="source")
+    def fetch(source: str = "default") -> str:
+        return source
+
+    @flow(name="keyed-kw-flow")
+    def run() -> None:
+        fetch(source="via_kw")
+        fetch()
+        ctx = get_run()
+        assert ctx is not None
+        captured.extend(t.instance for t in ctx.tasks)
+
+    run()
+    assert captured == ["fetch[via_kw]", "fetch[default]"]
+
+
+def test_invalid_task_key_raises_at_decoration():
+    with pytest.raises(ValueError, match="not a parameter"):
+
+        @task(name="bad", key="nope")
+        def bad(source: str) -> str:
+            return source
+
+
+def test_task_summary_uses_instance_label(tmp_path: Path):
+    import json
+
+    @task(name="fetch", key="source")
+    def fetch(source: str) -> str:
+        return source
+
+    @flow(name="summary-keyed-flow")
+    def run() -> None:
+        fetch("iau_csn")
+
+    run()
+    log_files = list((tmp_path / "logs" / "summary-keyed-flow").glob("*.jsonl"))
+    assert len(log_files) == 1
+    records = [json.loads(line) for line in log_files[0].read_text().splitlines() if line.strip()]
+    summaries = [r for r in records if r.get("message") == "task summary"]
+    assert len(summaries) == 1
+    assert summaries[0]["extra"]["task"] == "fetch[iau_csn]"
+    assert summaries[0]["extra"]["task_key"] == "iau_csn"
