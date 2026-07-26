@@ -11,7 +11,7 @@ from app.config import get_settings
 from app.loaders import exoplanet_names, iau_csn, wgsn_faints
 from app.resolve import build_aliases, build_stars, link_exoplanet_hosts
 from app.runtime.checks import expect
-from app.runtime.flow import flow, get_run, task
+from app.runtime.flow import flow, get_run, get_task, task
 from app.runtime.logging import bound_log
 from app.sources.snapshot import snapshot_dir
 
@@ -23,17 +23,17 @@ EXPECT_UNMATCHED = 1
 EXPECT_ALIASES = 2875
 
 
-def _ctx_log(*, task: str, **fields: object):
+def _ctx_log(**fields: object):
     run = get_run()
     return bound_log(
         run_id=run.run_id if run else "-",
         flow=run.flow_name if run else "build-identity",
-        task=task,
+        task=get_task() or "-",
         **fields,
     )
 
 
-@task(name="resolve_snapshot")
+@task(name="resolve_snapshot", key="source")
 def resolve_snapshot(source: str) -> Path:
     """Return the CSV path inside data/raw/<source>/current/ and log its checksum."""
     settings = get_settings()
@@ -53,7 +53,6 @@ def resolve_snapshot(source: str) -> Path:
         sha256 = meta.get("sha256")
 
     _ctx_log(
-        task="resolve_snapshot",
         source=source,
         path=str(path),
         sha256=sha256 or "",
@@ -67,7 +66,6 @@ def load_csn(path: Path) -> pl.DataFrame:
     frame = iau_csn.load(path)
     valid = int(frame["is_valid"].sum())
     _ctx_log(
-        task="load_iau_csn",
         rows=frame.height,
         valid=valid,
         flagged=frame.height - valid,
@@ -80,7 +78,6 @@ def load_faints(path: Path) -> pl.DataFrame:
     frame = wgsn_faints.load(path)
     valid = int(frame["is_valid"].sum())
     _ctx_log(
-        task="load_wgsn_faints",
         rows=frame.height,
         valid=valid,
         flagged=frame.height - valid,
@@ -93,7 +90,6 @@ def load_exo(path: Path) -> pl.DataFrame:
     frame = exoplanet_names.load(path)
     valid = int(frame["is_valid"].sum())
     _ctx_log(
-        task="load_exoplanet_names",
         rows=frame.height,
         valid=valid,
         flagged=frame.height - valid,
@@ -105,7 +101,6 @@ def load_exo(path: Path) -> pl.DataFrame:
 def resolve_stars_task(csn: pl.DataFrame, faints: pl.DataFrame) -> pl.DataFrame:
     stars = build_stars(csn, faints)
     _ctx_log(
-        task="resolve_stars",
         rows=stars.height,
         with_coords=int(stars["ra_deg"].is_not_null().sum()),
         with_hip=int(stars["hip"].is_not_null().sum()),
@@ -118,7 +113,6 @@ def resolve_aliases_task(stars: pl.DataFrame) -> pl.DataFrame:
     aliases = build_aliases(stars)
     mean = aliases.height / stars.height if stars.height else 0.0
     _ctx_log(
-        task="resolve_aliases",
         rows=aliases.height,
         per_star_mean=round(mean, 2),
     ).info("built aliases")
@@ -129,7 +123,6 @@ def resolve_aliases_task(stars: pl.DataFrame) -> pl.DataFrame:
 def link_hosts_task(stars: pl.DataFrame, exo: pl.DataFrame) -> tuple[pl.DataFrame, pl.DataFrame]:
     linked, unmatched = link_exoplanet_hosts(stars, exo)
     _ctx_log(
-        task="link_hosts",
         linked=linked.height,
         unmatched=unmatched.height,
     ).info("linked exoplanet hosts")
@@ -160,7 +153,6 @@ def write_outputs(
     for key, path in paths.items():
         frames[key].write_parquet(path)
         _ctx_log(
-            task="write_outputs",
             output=key,
             path=str(path),
             rows=frames[key].height,
