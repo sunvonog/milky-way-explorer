@@ -20,6 +20,7 @@ EXPECT_STARS = 605
 EXPECT_WITH_COORDS = 154
 EXPECT_HOST_LINKS = 163
 EXPECT_UNMATCHED = 1
+EXPECT_ALIASES = 2875
 
 
 def _ctx_log(*, task: str, **fields: object):
@@ -183,7 +184,7 @@ def check_expectations(
     )
     expect("host_links", linked.height, EXPECT_HOST_LINKS)
     expect("unmatched_hosts", unmatched.height, EXPECT_UNMATCHED)
-    _ctx_log(task="check_expectations", aliases=aliases.height).info("alias count (informational)")
+    expect("aliases", aliases.height, EXPECT_ALIASES)
 
 
 @flow(name="build-identity")
