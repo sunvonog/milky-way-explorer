@@ -296,6 +296,24 @@ NASA hostname
 
 Names are stored in a separate string table and referenced by integer index from the compact render file.
 
+### 9.1 Identity naming catalogues
+
+The offline identity flow also builds a canonical IAU-named star table from the IAU Catalog of Star Names (CSN), WGSN Faints enrichment, and NASA exoplanet host names.
+
+Incomplete CSN rows are not discarded silently. They are written to `data/processed/review_dropped_stars.parquet` for human review. Unmatched exoplanet host names go to the parallel review sink `data/processed/review_unmatched_hosts.parquet` (currently **Mazalaai**).
+
+#### Unurgunite
+
+The current CSN snapshot has 606 rows. Exactly one fails the loader validity checks (non-empty proper name and constellation): **Unurgunite**.
+
+That row is a redirect stub, not a second physical star:
+
+- designation, HIP, Bayer ID, and constellation are empty;
+- `origin` is `see Nganurganity`;
+- Stanbridge (1857/61) recorded the Boorong name with an English-adapted spelling that dropped the initial *ng-*; WGSN later adopted the corrected form **Nganurganity**.
+
+**Nganurganity** remains the canonical row in `stars.parquet`. Unurgunite is kept only in `review_dropped_stars.parquet` so the historical spelling stays auditable without duplicating the star in search or render tables.
+
 ## 10. Build publication
 
 A dataset build is published only after all mandatory validation checks pass.
