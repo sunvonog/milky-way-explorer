@@ -1,4 +1,5 @@
 """Name resolution over the canonical alias table."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -47,6 +48,7 @@ LIMIT ?
 @dataclass(frozen=True, slots=True)
 class SearchHit:
     """Hit a star with the search."""
+
     star_id: str
     display_name: str
     matched_alias: str
@@ -57,10 +59,7 @@ class SearchHit:
 
 
 def search(
-    processed_root: Path,
-    query: str,
-    limit: int = 20,
-    memory_limit: str = "512MB"
+    processed_root: Path, query: str, limit: int = 20, memory_limit: str = "512MB"
 ) -> list[SearchHit]:
     """Resolve free text to canonical stars, best match first.
 

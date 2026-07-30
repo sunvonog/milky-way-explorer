@@ -1,4 +1,5 @@
 """Resolution and validation of build data file paths."""
+
 from __future__ import annotations
 
 from pathlib import Path

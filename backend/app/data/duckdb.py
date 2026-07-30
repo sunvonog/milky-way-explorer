@@ -3,6 +3,7 @@
 A fresh in-memory connection per request: no cached handles, so a newly
 published build is picked up without a restart, and no long-lived memory growth.
 """
+
 from __future__ import annotations
 
 from collections.abc import Iterator

@@ -13,7 +13,7 @@ def search_endpoint(
     processed_root: ProcessedRoot,
     settings: SettingsDep,
     q: str = Query(min_length=1, max_length=100, description="Name, alias, or catalogue ID"),
-    limit: int = Query(default=20, ge=1, le=50)
+    limit: int = Query(default=20, ge=1, le=50),
 ) -> list[SearchResult]:
     try:
         hits = run_search(processed_root, q, limit, settings.duckdb_memory_limit)

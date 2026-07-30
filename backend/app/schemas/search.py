@@ -21,5 +21,5 @@ class SearchResult(BaseModel):
             catalogue=hit.catalogue,
             is_exact=hit.is_exact,
             ra_deg=hit.ra_deg,
-            dec_deg=hit.dec_deg
+            dec_deg=hit.dec_deg,
         )

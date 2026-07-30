@@ -3,6 +3,7 @@
 Must stay behaviourally identical to pipelines/app/names.py. The contract is
 pinned by tests/test_search_key_contract.py, which exists in both projects.
 """
+
 from __future__ import annotations
 
 import unicodedata
@@ -19,8 +20,6 @@ def search_key(text: str) -> str:
     normalised = unicodedata.normalize("NFKC", text)
     decomposed = unicodedata.normalize("NFKD", normalised)
     stripped = "".join(
-        c
-        for c in decomposed
-        if not unicodedata.combining(c) and c not in _APOSTROPHE_LIKE
+        c for c in decomposed if not unicodedata.combining(c) and c not in _APOSTROPHE_LIKE
     )
     return "".join(c for c in stripped.casefold() if c.isalnum())
