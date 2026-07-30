@@ -1,21 +1,5 @@
 import json
 
-import pytest
-from fastapi.testclient import TestClient
-
-from app.config import Settings, get_settings
-from app.main import app
-
-
-@pytest.fixture
-def client(tmp_path):
-    def override() -> Settings:
-        return Settings(data_root=tmp_path)
-
-    app.dependency_overrides[get_settings] = override
-    yield TestClient(app)
-    app.dependency_overrides.clear()
-
 
 def test_health_is_independent_of_data(client):
     assert client.get("/api/v1/health").json() == {"status": "ok"}
