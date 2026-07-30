@@ -9,7 +9,7 @@ import polars as pl
 
 from app.config import get_settings
 from app.loaders import exoplanet_names, iau_csn, wgsn_faints
-from app.resolve import build_aliases, build_stars, link_exoplanet_hosts
+from app.resolve import build_aliases, build_stars, link_exoplanet_hosts, review_dropped_stars
 from app.runtime.checks import expect
 from app.runtime.flow import flow, get_run, get_task, task
 from app.runtime.logging import bound_log
@@ -20,6 +20,7 @@ EXPECT_STARS = 605
 EXPECT_WITH_COORDS = 154
 EXPECT_HOST_LINKS = 163
 EXPECT_UNMATCHED = 1
+EXPECT_DROPPED_STARS = 1
 EXPECT_ALIASES = 2875
 
 
@@ -108,6 +109,13 @@ def resolve_stars_task(csn: pl.DataFrame, faints: pl.DataFrame) -> pl.DataFrame:
     return stars
 
 
+@task(name="review_dropped")
+def review_dropped_task(csn: pl.DataFrame) -> pl.DataFrame:
+    dropped = review_dropped_stars(csn)
+    _ctx_log(rows=dropped.height).info("collected dropped stars for review")
+    return dropped
+
+
 @task(name="resolve_aliases")
 def resolve_aliases_task(stars: pl.DataFrame) -> pl.DataFrame:
     aliases = build_aliases(stars)
@@ -135,6 +143,7 @@ def write_outputs(
     aliases: pl.DataFrame,
     linked: pl.DataFrame,
     unmatched: pl.DataFrame,
+    dropped: pl.DataFrame,
 ) -> dict[str, Path]:
     out = get_settings().processed_root
     out.mkdir(parents=True, exist_ok=True)
@@ -143,12 +152,14 @@ def write_outputs(
         "aliases": out / "alias.parquet",
         "linked": out / "exoplanet_host_links.parquet",
         "unmatched": out / "review_unmatched_hosts.parquet",
+        "dropped": out / "review_dropped_stars.parquet",
     }
     frames = {
         "stars": stars,
         "aliases": aliases,
         "linked": linked,
         "unmatched": unmatched,
+        "dropped": dropped,
     }
     for key, path in paths.items():
         frames[key].write_parquet(path)
@@ -167,6 +178,7 @@ def check_expectations(
     aliases: pl.DataFrame,
     linked: pl.DataFrame,
     unmatched: pl.DataFrame,
+    dropped: pl.DataFrame,
 ) -> None:
     expect("stars", stars.height, EXPECT_STARS)
     expect(
@@ -176,6 +188,7 @@ def check_expectations(
     )
     expect("host_links", linked.height, EXPECT_HOST_LINKS)
     expect("unmatched_hosts", unmatched.height, EXPECT_UNMATCHED)
+    expect("dropped_stars", dropped.height, EXPECT_DROPPED_STARS)
     expect("aliases", aliases.height, EXPECT_ALIASES)
 
 
@@ -187,7 +200,8 @@ def build_identity() -> None:
     exo = load_exo(resolve_snapshot("exoplanet_names"))
 
     stars = resolve_stars_task(csn, faints)
+    dropped = review_dropped_task(csn)
     aliases = resolve_aliases_task(stars)
     linked, unmatched = link_hosts_task(stars, exo)
-    write_outputs(stars, aliases, linked, unmatched)
-    check_expectations(stars, aliases, linked, unmatched)
+    write_outputs(stars, aliases, linked, unmatched, dropped)
+    check_expectations(stars, aliases, linked, unmatched, dropped)

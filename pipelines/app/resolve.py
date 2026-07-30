@@ -1,7 +1,7 @@
 """Resolve the three naming sources into canonical stars + aliases.
 
 Verified counts against the current snapshot:
-    605 canonical stars (0 duplicate name keys)
+    606 IAU-CSN rows → 605 canonical stars + 1 review drop ('Unurgunite')
     154/154 WGSN_Faints matched (strict subset of IAU-CSN)
     163/164 exoplanet hosts matched; 'Mazalaai' unmatched -> review table
     604/605 stars carry HIP or a designation for Stage 2 Gaia cross-match
@@ -151,6 +151,13 @@ def build_aliases(stars: pl.DataFrame) -> pl.DataFrame:
         .filter(pl.col("alias_search_key") != "")
         .unique(subset=["star_id", "alias_search_key"])
         .sort("star_id", "priority")
+    )
+
+
+def review_dropped_stars(csn: pl.DataFrame) -> pl.DataFrame:
+    """Rows flagged invalid by the IAU-CSN loader, kept for human review."""
+    return csn.filter(~pl.col("is_valid")).with_columns(
+        review_reason=pl.lit("incomplete IAU-CSN row (missing constellation or proper_name)")
     )
 
 
