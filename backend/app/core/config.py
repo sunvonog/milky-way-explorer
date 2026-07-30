@@ -13,6 +13,10 @@ class Settings(BaseSettings):
     duckdb_memory_limit: str = "1GB"
 
     @property
+    def processed_root(self) -> Path:
+        return self.data_root / "processed"
+
+    @property
     def builds_root(self) -> Path:
         return self.data_root / "builds"
 
