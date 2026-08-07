@@ -5,44 +5,45 @@ from __future__ import annotations
 from pathlib import Path
 
 import polars as pl
-from polars._typing import SchemaDict
 
 SOURCE = "nasa_pscomppars"
 _GAIA_DR3_PATTERN = r"^Gaia DR3 ([0-9]+)$"
 
-RAW_SCHEMA: SchemaDict = {
-    "pl_name": pl.String,
-    "hostname": pl.String,
-    "pl_letter": pl.String,
-    "hd_name": pl.String,
-    "hip_name": pl.String,
-    "tic_id": pl.String,
-    "gaia_dr3_id": pl.String,
-    "ra": pl.Float64,
-    "dec": pl.Float64,
-    "sy_dist": pl.Float64,
-    "sy_snum": pl.Int16,
-    "sy_pnum": pl.Int16,
-    "cb_flag": pl.Int8,
-    "st_teff": pl.Float64,
-    "st_mass": pl.Float64,
-    "st_rad": pl.Float64,
-    "st_lum": pl.Float64,
-    "pl_rade": pl.Float64,
-    "pl_bmasse": pl.Float64,
-    "pl_bmassprov": pl.String,
-    "pl_dens": pl.Float64,
-    "pl_eqt": pl.Float64,
-    "pl_insol": pl.Float64,
-    "pl_orbper": pl.Float64,
-    "pl_orbsmax": pl.Float64,
-    "pl_orbeccen": pl.Float64,
-    "pl_orbincl": pl.Float64,
-    "discoverymethod": pl.String,
-    "disc_year": pl.Int16,
-    "disc_facility": pl.String,
-    "pl_controv_flag": pl.Int8,
-}
+RAW_SCHEMA = pl.Schema(
+    {
+        "pl_name": pl.String,
+        "hostname": pl.String,
+        "pl_letter": pl.String,
+        "hd_name": pl.String,
+        "hip_name": pl.String,
+        "tic_id": pl.String,
+        "gaia_dr3_id": pl.String,
+        "ra": pl.Float64,
+        "dec": pl.Float64,
+        "sy_dist": pl.Float64,
+        "sy_snum": pl.Int16,
+        "sy_pnum": pl.Int16,
+        "cb_flag": pl.Int8,
+        "st_teff": pl.Float64,
+        "st_mass": pl.Float64,
+        "st_rad": pl.Float64,
+        "st_lum": pl.Float64,
+        "pl_rade": pl.Float64,
+        "pl_bmasse": pl.Float64,
+        "pl_bmassprov": pl.String,
+        "pl_dens": pl.Float64,
+        "pl_eqt": pl.Float64,
+        "pl_insol": pl.Float64,
+        "pl_orbper": pl.Float64,
+        "pl_orbsmax": pl.Float64,
+        "pl_orbeccen": pl.Float64,
+        "pl_orbincl": pl.Float64,
+        "discoverymethod": pl.String,
+        "disc_year": pl.Int16,
+        "disc_facility": pl.String,
+        "pl_controv_flag": pl.Int8,
+    }
+)
 
 RENAME = {
     "pl_name": "planet_name",
