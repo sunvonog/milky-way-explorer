@@ -11,9 +11,13 @@
     "build-only": "vite build",
     "type-check": "vue-tsc --build",
     "lint": "run-s \"lint:*\"",
-    "lint:oxlint": "oxlint . --fix",
-    "lint:eslint": "eslint . --fix --cache",
-    "format": "oxfmt src/"
+    "lint:oxlint": "oxlint .",
+    "lint:eslint": "eslint .",
+    "lint:fix": "run-s \"lint:fix:*\"",
+    "lint:fix:oxlint": "oxlint . --fix",
+    "lint:fix:eslint": "eslint . --fix",
+    "format": "oxfmt src/",
+    "format:check": "oxfmt --check src/"
   },
   "dependencies": {
     "apache-arrow": "^21.2.0",

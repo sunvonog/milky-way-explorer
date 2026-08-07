@@ -1,0 +1,100 @@
+minimum_pre_commit_version: "4.0.0"
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: check-yaml
+      - id: check-json
+      - id: check-merge-conflict
+      - id: check-added-large-files
+        args: [--maxkb=2500]
+
+  - repo: local
+    hooks:
+      # Pipelines
+      - id: pipelines-ruff-check
+        name: pipelines · Ruff lint
+        entry: uv run --project pipelines ruff check pipelines
+        language: system
+        pass_filenames: false
+        files: ^(pipelines/|data/raw/)
+
+      - id: pipelines-ruff-format
+        name: pipelines · Ruff formatting
+        entry: uv run --project pipelines ruff format --check pipelines
+        language: system
+        pass_filenames: false
+        files: ^(pipelines/|data/raw/)
+
+      - id: pipelines-type-check
+        name: pipelines · type check
+        entry: uv run --project pipelines ty check pipelines
+        language: system
+        pass_filenames: false
+        files: ^(pipelines/|data/raw/)
+
+      - id: pipelines-tests
+        name: pipelines · tests
+        entry: uv run --project pipelines pytest -q pipelines
+        language: system
+        pass_filenames: false
+        files: ^(pipelines/|data/raw/)
+
+        # Backend
+      - id: backend-ruff-check
+        name: backend · Ruff lint
+        entry: uv run --project backend ruff check backend
+        language: system
+        pass_filenames: false
+        files: ^backend/
+
+      - id: backend-ruff-format
+        name: backend · Ruff formatting
+        entry: uv run --project backend ruff format --check backend
+        language: system
+        pass_filenames: false
+        files: ^backend/
+
+      - id: backend-type-check
+        name: backend · type check
+        entry: uv run --project backend ty check backend
+        language: system
+        pass_filenames: false
+        files: ^backend/
+
+      - id: backend-tests
+        name: backend · tests
+        entry: uv run --project backend pytest -q backend
+        language: system
+        pass_filenames: false
+        files: ^backend/
+
+      # Frontend
+      - id: frontend-lint
+        name: frontend · lint
+        entry: npm --prefix frontend run lint
+        language: system
+        pass_filenames: false
+        files: ^frontend/
+
+      - id: frontend-format
+        name: frontend · formatting
+        entry: npm --prefix frontend run format:check
+        language: system
+        pass_filenames: false
+        files: ^frontend/
+
+      - id: frontend-type-check
+        name: frontend · type check
+        entry: npm --prefix frontend run type-check
+        language: system
+        pass_filenames: false
+        files: ^frontend/
+
+      - id: frontend-tests
+        name: frontend · tests
+        entry: npm --prefix frontend run test:unit -- --run
+        language: system
+        pass_filenames: false
+        files: ^frontend/
