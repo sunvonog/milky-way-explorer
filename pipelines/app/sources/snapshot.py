@@ -28,6 +28,8 @@ import hashlib
 import json
 import shutil
 import tempfile
+import urllib
+import urllib.error
 import urllib.request
 from datetime import UTC, datetime
 from pathlib import Path
@@ -119,8 +121,15 @@ def snapshot_url(
     tripwire when refreshin.
     """
     req = urllib.request.Request(url, headers={"User-Agent": "milky-way-explorer/0.1"})
-    with urllib.request.urlopen(req, timeout=timeout) as resp:
-        payload = resp.read()
+
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            payload = resp.read()
+    except urllib.error.HTTPError as exc:
+        body = exc.read().decode("utf-8", errors="replace").strip()
+        detail = body[:2000] if body else str(exc.reason)
+
+        raise RuntimeError(f"{source}: upstream returned HTTP {exc.code}.\n{detail}") from exc
 
     digest = _sha256(payload)
     if expected_sha256 is not None and digest != expected_sha256:

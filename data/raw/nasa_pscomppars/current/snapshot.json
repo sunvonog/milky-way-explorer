@@ -1,0 +1,9 @@
+{
+  "source": "nasa_pscomppars",
+  "origin": "https://exoplanetarchive.ipac.caltech.edu/TAP/sync?query=SELECT+pl_name%2Chostname%2Cpl_letter%2Chd_name%2Chip_name%2Ctic_id%2Cgaia_dr3_id%2Cra%2Cdec%2Csy_dist%2Csy_snum%2Csy_pnum%2Ccb_flag%2Cst_teff%2Cst_mass%2Cst_rad%2Cst_lum%2Cpl_rade%2Cpl_bmasse%2Cpl_bmassprov%2Cpl_dens%2Cpl_eqt%2Cpl_insol%2Cpl_orbper%2Cpl_orbsmax%2Cpl_orbeccen%2Cpl_orbincl%2Cdiscoverymethod%2Cdisc_year%2Cdisc_facility%2Cpl_controv_flag+FROM+pscomppars+ORDER+BY+pl_name&format=csv",
+  "original_filename": "pscomppars.csv",
+  "fetched_at": "20260807T165237Z",
+  "fetched_online": true,
+  "sha256": "1c8ce8507744485ddc2b25974d0e7f328a36a4ffde3021bee2f2e5ca4c52c07c",
+  "bytes": 1858817
+}

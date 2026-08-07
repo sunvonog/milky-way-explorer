@@ -15,22 +15,15 @@ from pathlib import Path
 from app.config import get_settings
 from app.runtime.flow import flow, get_run, get_task, task
 from app.runtime.logging import bound_log
-from app.sources.snapshot import snapshot_local, snapshot_url
+from app.sources.snapshot import snapshot_local
 
-# For sources with a stable raw-CSV URL, prefer snapshot_url.
-# For sources that only offer a rendered page, export by hand into _inputs/
-# and use snapshot_local. Fill URLs once you have confirmed they serve raw CSV.
-URL_SOURCES: dict[str, str] = {
-    # "iau_csn": "https://exopla.net/....csv",
-}
-
-LOCAL_SOURCES: dict[str, str] = {
+NAMING_SOURCES: dict[str, str] = {
     "iau_csn": "IAU-Catalog-of-Star-Names.csv",
     "wgsn_faints": "WGSN-Faints.csv",
     "exoplanet_names": "Exoplanet-Name-Catalog.csv",
 }
 
-ORIGIN = "https://exopla.net"
+NAMING_ORIGIN = "https://exopla.net"
 
 
 def _ctx_log(**fields: object):
@@ -43,23 +36,11 @@ def _ctx_log(**fields: object):
     )
 
 
-@task(name="snapshot_from_url", key="source")
-def snapshot_from_url(source: str, url: str) -> Path:
-    settings = get_settings()
-    path = snapshot_url(url, source, settings.raw_root)
-    _ctx_log(
-        source=source,
-        path=str(path),
-        origin=url,
-    ).info("snapshotted from url")
-    return path
-
-
 @task(name="snapshot_from_local", key="source")
 def snapshot_from_local(source: str, filename: str) -> Path:
     settings = get_settings()
     source_file = settings.inputs_dir / filename
-    path = snapshot_local(source_file, source, settings.raw_root, origin=ORIGIN)
+    path = snapshot_local(source_file, source, settings.raw_root, origin=NAMING_ORIGIN)
     _ctx_log(
         source=source,
         path=str(path),
@@ -78,16 +59,13 @@ def refresh_snapshots() -> None:
         inputs_dir=str(settings.inputs_dir),
     ).info("refresh starting")
 
-    if not settings.inputs_dir.is_dir() and LOCAL_SOURCES:
+    if not settings.inputs_dir.is_dir() and NAMING_SOURCES:
         raise SystemExit(
             f"missing input directory: {settings.inputs_dir}\n"
             "Create it and place the downloaded CSVs there."
         )
 
-    for source, url in URL_SOURCES.items():
-        snapshot_from_url(source, url)
-
-    for source, filename in LOCAL_SOURCES.items():
+    for source, filename in NAMING_SOURCES.items():
         snapshot_from_local(source, filename)
 
     _ctx_log().info("refresh complete; review git diff --stat data/raw/, then commit")

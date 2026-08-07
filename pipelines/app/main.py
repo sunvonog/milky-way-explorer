@@ -14,6 +14,7 @@ import argparse
 import sys
 
 from app.config import override_settings
+from app.flows.exoplanets import refresh_pscomppars
 from app.flows.identity import build_identity
 from app.flows.snapshots import refresh_snapshots
 from app.runtime.flow import flow
@@ -35,7 +36,7 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "command",
         nargs="?",
         default="build",
-        choices=["build", "refresh-snapshots"],
+        choices=["build", "refresh-snapshots", "refresh-pscomppars"],
         help="pipeline to run (default: build)",
     )
     parser.add_argument(
@@ -73,6 +74,8 @@ def main(argv: list[str] | None = None) -> int:
     try:
         if args.command == "refresh-snapshots":
             refresh_snapshots()
+        elif args.command == "refresh-pscomppars":
+            refresh_pscomppars()
         else:
             canonical_build()
     except SystemExit as exc:
