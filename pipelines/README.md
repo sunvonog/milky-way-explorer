@@ -85,6 +85,7 @@ writes:
 | `review_invalid_exoplanet_rows.parquet` | Staging validation failures |
 | `review_host_stellar_conflicts.parquet` | Conflicting stellar candidates |
 | `review_system_planet_count_mismatches.parquet` | Archive vs recomputed planet counts |
+| `gaia_host_ids.parquet` | Sorted, distinct Gaia DR3 IDs required for exact host retrieval |
 
 All paths are under `data/processed/`.
 
