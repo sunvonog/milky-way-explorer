@@ -2,6 +2,10 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Protocol, cast
+
 from app.gaia import GaiaHostBatch
 
 GAIA_SOURCE_TABLE = "gaiadr3.gaia_source"
@@ -48,6 +52,32 @@ GAIA_HOST_COLUMNS = (
 )
 
 
+class GaiaArchiveJob(Protocol):
+    jobid: str
+
+    def get_phase(self) -> str: ...
+
+
+class GaiaArchiveClient(Protocol):
+    def launch_job_async(
+        self,
+        query: str,
+        *,
+        output_file: str,
+        output_format: str,
+        dump_to_file: bool,
+        background: bool,
+        verbose: bool,
+    ) -> GaiaArchiveJob: ...
+
+
+@dataclass(frozen=True, slots=True)
+class GaiaBatchDownload:
+    batch_number: int
+    job_id: str
+    path: Path
+
+
 def gaia_host_query(batch: GaiaHostBatch) -> str:
     """Build an ADQL query for one exact Gaia host batch."""
     if not batch.source_ids:
@@ -61,4 +91,54 @@ def gaia_host_query(batch: GaiaHostBatch) -> str:
         f"FROM {GAIA_SOURCE_TABLE} "
         f"WHERE source_id IN ({source_ids}) "
         "ORDER BY source_id"
+    )
+
+
+def _default_client() -> GaiaArchiveClient:
+    from astroquery.gaia import Gaia
+
+    return cast(GaiaArchiveClient, Gaia)
+
+
+def download_gaia_host_batch(
+    batch: GaiaHostBatch,
+    destination: Path,
+    *,
+    client: GaiaArchiveClient | None = None,
+) -> GaiaBatchDownload:
+    """Download one exact Gaia host batch using an asynchronous TAP job."""
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    partial = destination.with_name(f".{destination.name}.part")
+    partial.unlink(missing_ok=True)
+
+    archive = client or _default_client()
+
+    try:
+        job = archive.launch_job_async(
+            gaia_host_query(batch),
+            output_file=str(partial),
+            output_format="csv",
+            dump_to_file=True,
+            background=False,
+            verbose=False,
+        )
+
+        phase = job.get_phase()
+        if phase != "COMPLETED":
+            raise RuntimeError(
+                f"Gaia batch {batch.batch_number} job {job.jobid} ended in phase {phase}"
+            )
+
+        if not partial.is_file() or partial.stat().st_size == 0:
+            raise RuntimeError(
+                f"Gaia batch {batch.batch_number} job {job.jobid} did not produce an output file"
+            )
+
+        partial.replace(destination)
+    except BaseException:
+        partial.unlink(missing_ok=True)
+        raise
+
+    return GaiaBatchDownload(
+        batch_number=batch.batch_number, job_id=str(job.jobid), path=destination
     )

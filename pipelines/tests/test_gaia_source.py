@@ -1,7 +1,62 @@
+from pathlib import Path
+
 import pytest
 
 from app.gaia import GaiaHostBatch
-from app.sources.gaia import GAIA_HOST_COLUMNS, GAIA_SOURCE_TABLE, gaia_host_query
+from app.sources.gaia import (
+    GAIA_HOST_COLUMNS,
+    GAIA_SOURCE_TABLE,
+    GaiaBatchDownload,
+    download_gaia_host_batch,
+    gaia_host_query,
+)
+
+
+class FakeGaiaJob:
+    def __init__(self, phase: str = "COMPLETED"):
+        self.jobid = "fake-job-123"
+        self._phase = phase
+
+    def get_phase(self) -> str:
+        return self._phase
+
+
+class FakeGaiaClient:
+    def __init__(
+        self,
+        *,
+        phase: str = "COMPLETED",
+        write_output: bool = True,
+    ):
+        self.phase = phase
+        self.write_output = write_output
+        self.calls: list[dict[str, object]] = []
+
+    def launch_job_async(
+        self,
+        query: str,
+        *,
+        output_file: str,
+        output_format: str,
+        dump_to_file: bool,
+        background: bool,
+        verbose: bool,
+    ) -> FakeGaiaJob:
+        self.calls.append(
+            {
+                "query": query,
+                "output_file": output_file,
+                "output_format": output_format,
+                "dump_to_file": dump_to_file,
+                "background": background,
+                "verbose": verbose,
+            }
+        )
+
+        if self.write_output:
+            Path(output_file).write_text("source_id,designation\n7,Gaia DR3 7\n", encoding="utf-8")
+
+        return FakeGaiaJob(self.phase)
 
 
 def test_gaia_host_columns_match_enrichment_contract():
@@ -64,3 +119,44 @@ def test_gaia_host_query_rejects_empty_batch():
 
     with pytest.raises(ValueError, match="Gaia host batch must not be empty"):
         gaia_host_query(batch)
+
+
+def test_download_gaia_host_batch_uses_async_file_output(tmp_path: Path):
+    batch = GaiaHostBatch(batch_number=3, source_ids=(7, 42))
+    destination = tmp_path / "gaia-host-0003.csv"
+    partial = tmp_path / ".gaia-host-0003.csv.part"
+    client = FakeGaiaClient()
+
+    result = download_gaia_host_batch(batch, destination, client=client)
+
+    assert result == GaiaBatchDownload(batch_number=3, job_id="fake-job-123", path=destination)
+    assert destination.is_file()
+    assert not partial.exists()
+
+    assert client.calls == [
+        {
+            "query": gaia_host_query(batch),
+            "output_file": str(partial),
+            "output_format": "csv",
+            "dump_to_file": True,
+            "background": False,
+            "verbose": False,
+        }
+    ]
+
+
+def test_download_gaia_host_batch_cleans_up_failed_job(tmp_path: Path):
+    batch = GaiaHostBatch(batch_number=2, source_ids=(7,))
+    destination = tmp_path / "gaia-host-0002.csv"
+    partial = tmp_path / ".gaia-host-0002.csv.part"
+    client = FakeGaiaClient(phase="ERROR")
+
+    with pytest.raises(RuntimeError, match="ended in phase ERROR"):
+        download_gaia_host_batch(
+            batch,
+            destination,
+            client=client,
+        )
+
+    assert not destination.exists()
+    assert not partial.exists()
