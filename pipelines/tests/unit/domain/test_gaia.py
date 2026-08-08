@@ -1,14 +1,12 @@
-from pathlib import Path
-
 import polars as pl
 import pytest
 from polars.testing import assert_frame_equal
 
-from app.exoplanets import build_hosts
-from app.gaia import GaiaHostBatch, build_gaia_host_ids, plan_gaia_host_batches
+from app.config import REPO_ROOT
+from app.domain.exoplanets import build_hosts
+from app.domain.gaia import GaiaHostBatch, build_gaia_host_ids, plan_gaia_host_batches
 from app.loaders.pscomppars import load
 
-REPO_ROOT = Path(__file__).resolve().parents[2]
 PSCOMPPARS_SNAPSHOT = REPO_ROOT / "data" / "raw" / "nasa_pscomppars" / "current" / "pscomppars.csv"
 
 

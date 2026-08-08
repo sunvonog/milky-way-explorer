@@ -8,7 +8,7 @@ from pathlib import Path
 import polars as pl
 
 from app.config import get_settings
-from app.exoplanets import (
+from app.domain.exoplanets import (
     build_hosts,
     build_planets,
     build_systems,

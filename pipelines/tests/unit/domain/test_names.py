@@ -1,6 +1,6 @@
 import pytest
 
-from app.names import bayer_aliases, parse_bayer, search_key
+from app.domain.names import bayer_aliases, parse_bayer, search_key
 
 
 @pytest.mark.parametrize(

@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import polars as pl
 
-from app.names import bayer_aliases, parse_bayer, search_key
+from app.domain.names import bayer_aliases, parse_bayer, search_key
 
 # Display-name priority. Lower number wins.
 PRIORITY = {

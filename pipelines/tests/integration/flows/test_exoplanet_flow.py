@@ -4,7 +4,7 @@ from pathlib import Path
 import polars as pl
 import pytest
 
-from app.config import override_settings, reset_settings
+from app.config import REPO_ROOT, override_settings, reset_settings
 from app.flows.exoplanets import (
     OUTPUT_FILENAMES,
     SNAPSHOT_FILENAME,
@@ -13,7 +13,6 @@ from app.flows.exoplanets import (
 )
 from app.sources.snapshot import snapshot_dir
 
-REPO_ROOT = Path(__file__).resolve().parents[2]
 SOURCE_SNAPSHOT = REPO_ROOT / "data" / "raw" / SOURCE / "current" / SNAPSHOT_FILENAME
 
 EXPECTED_FILENAMES = {

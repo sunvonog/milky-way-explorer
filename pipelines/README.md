@@ -1,9 +1,10 @@
 # Pipelines
 
 Offline data pipelines for Milky Way Explorer. Transforms vendored naming
-catalogues into canonical Parquet tables. No orchestrator server — flows are
-plain Python functions with Prefect-style `@flow` / `@task` decorators for
-run identity, timing, retries, and structured logging.
+catalogues and committed external-source snapshots into canonical Parquet tables.
+No orchestrator server — flows are plain Python functions with Prefect-style
+`@flow` / `@task` decorators for run identity, timing, retries, and structured
+logging.
 
 ## Setup
 
@@ -24,8 +25,9 @@ uv run python -m app.main refresh-snapshots    # maintainer-only naming snapshot
 uv run python -m app.main refresh-pscomppars   # maintainer-only NASA PSCompPars refresh
 ```
 
-`canonical_build` runs identity naming tables, then PSCompPars domain tables
-(`build-exoplanets`).
+`canonical_build` builds the identity tables, PSCompPars domain tables, and the
+Gaia host-ID retrieval manifest. It consumes committed snapshots and does not
+contact external services.
 
 `refresh-snapshots` and `refresh-pscomppars` are intentionally **not** part of
 the build. They overwrite `data/raw/<source>/current/`. Review
@@ -62,16 +64,28 @@ use logly's `bind()` — kwargs to `info()` are format-string substitutions only
 
 ```text
 app/
-  main.py              # single entry point
-  config.py            # pydantic Settings
-  flows/               # declared pipelines (@flow / @task wrappers)
-  runtime/             # logging, flow/task decorators, expect()
-  loaders/             # pure CSV → DataFrame loaders
-  sources/             # snapshot write helpers
-  exoplanets.py        # PSCompPars staging → domain / review tables
-  names.py / resolve.py
-```
+├── main.py                 # CLI and canonical-build entry point
+├── config.py               # pydantic settings
+├── domain/                 # pure transformations and domain contracts
+│   ├── exoplanets.py
+│   ├── gaia.py
+│   ├── identity.py
+│   └── names.py
+├── flows/                  # task and flow orchestration
+├── loaders/                # raw source files → validated staging frames
+├── sources/                # queries, downloads, and snapshot persistence
+└── runtime/                # flow engine, logging, and expectations
 
+tests/
+├── unit/
+│   ├── domain/
+│   ├── loaders/
+│   ├── runtime/
+│   └── sources/
+└── integration/
+    ├── flows/
+    └── test_main.py
+    
 ### PSCompPars outputs
 
 `build-exoplanets` reads `data/raw/nasa_pscomppars/current/pscomppars.csv` and
@@ -91,17 +105,23 @@ All paths are under `data/processed/`.
 
 ## Adding a flow
 
-1. Put pure domain logic in a library module (no logging / decorators).
-2. Wrap steps with `@task` in `app/flows/<name>.py` and compose them under `@flow`.
-   For tasks that run once per source or chunk, pass `key=` so the run summary
-   labels each instance (`resolve_snapshot[iau_csn]`, `fetch_chunk[12]`, …).
-3. Call the new flow from `canonical_build()` in `app/main.py` (or add a
-   subcommand for maintainer-only work).
+1. Put deterministic business logic in `app/domain/<subject>.py`.
+2. Add source parsing under `app/loaders/` and external retrieval under
+   `app/sources/`.
+3. Wrap the operations with `@task` in `app/flows/<subject>.py`.
+4. Compose tasks under a named `@flow`.
+5. Add offline publication flows to `canonical_build()`. External refreshes
+   should instead receive an explicit maintainer-only CLI command.
+6. Mirror the implementation under `tests/unit/` and `tests/integration/`.
+
+For tasks repeated per source or batch, pass `key=` so run summaries identify
+each instance (`resolve_snapshot[iau_csn]`, `fetch_chunk[12]`, and similar).
 
 ## Tests
 
 ```bash
-uv run pytest
+uv run pytest tests/unit
+uv run pytest tests/integration
 uv run ruff check .
 uv run ruff format --check .
 uv run ty check

@@ -7,7 +7,7 @@ from pathlib import Path
 import polars as pl
 
 from app.config import get_settings
-from app.gaia import build_gaia_host_ids
+from app.domain.gaia import build_gaia_host_ids
 from app.runtime.checks import expect
 from app.runtime.flow import flow, task
 

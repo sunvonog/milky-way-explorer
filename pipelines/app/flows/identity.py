@@ -8,8 +8,13 @@ from pathlib import Path
 import polars as pl
 
 from app.config import get_settings
+from app.domain.identity import (
+    build_aliases,
+    build_stars,
+    link_exoplanet_hosts,
+    review_dropped_stars,
+)
 from app.loaders import exoplanet_names, iau_csn, wgsn_faints
-from app.resolve import build_aliases, build_stars, link_exoplanet_hosts, review_dropped_stars
 from app.runtime.checks import expect
 from app.runtime.flow import flow, get_run, get_task, task
 from app.runtime.logging import bound_log

@@ -1,9 +1,8 @@
-from pathlib import Path
-
 import polars as pl
 import pytest
 
-from app.exoplanets import (
+from app.config import REPO_ROOT
+from app.domain.exoplanets import (
     build_hosts,
     build_planets,
     build_systems,
@@ -13,7 +12,6 @@ from app.exoplanets import (
 )
 from app.loaders.pscomppars import load
 
-REPO_ROOT = Path(__file__).resolve().parents[2]
 SNAPSHOT = REPO_ROOT / "data" / "raw" / "nasa_pscomppars" / "current" / "pscomppars.csv"
 
 

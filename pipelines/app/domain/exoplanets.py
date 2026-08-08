@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import polars as pl
 
-from app.names import search_key
+from app.domain.names import search_key
 
 _ID_PREFIX = "nea"
 

@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Protocol, cast
 
-from app.gaia import GaiaHostBatch
+from app.domain.gaia import GaiaHostBatch
 
 GAIA_SOURCE_TABLE = "gaiadr3.gaia_source"
 

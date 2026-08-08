@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from app.gaia import GaiaHostBatch
+from app.domain.gaia import GaiaHostBatch
 from app.sources.gaia import (
     GAIA_HOST_COLUMNS,
     GAIA_SOURCE_TABLE,
