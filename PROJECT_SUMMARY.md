@@ -90,4 +90,4 @@ PSCompPars ingestion
 
 ## Next action
 
-Create the new GitHub repository and implement the NASA Exoplanet Archive ingestion pipeline before rebuilding the Gaia background pipeline.
+Run Gaia host enrichment against the published `exoplanet_hosts` Gaia IDs, then rebuild the density-background pipeline.

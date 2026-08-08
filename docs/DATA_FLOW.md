@@ -45,78 +45,134 @@ flowchart TD
 
 ## 2. Exoplanet-first ingestion
 
-The first external dataset retrieved in a build is NASA `PSCompPars`.
+The canonical build consumes a committed NASA `PSCompPars` snapshot. Retrieval
+is an explicit maintainer action and is not part of the normal build.
 
-### 2.1 Raw retrieval
+### 2.1 Raw snapshot refresh
 
-The raw query response is stored without destructive modification.
-
-The job records:
-
-- source endpoint;
-- table name;
-- query text;
-- request timestamp;
-- file checksum;
-- row count;
-- schema snapshot.
-
-### 2.2 Normalization
-
-The raw planet rows are split into three logical entities.
-
-#### Host
+A maintainer refreshes the snapshot with:
 
 ```text
-host_id
-hostname
-hd_name
-hip_name
-gaia_dr3_id
-ra
-dec
-system_distance_pc
-stellar_temperature_k
-stellar_mass_solar
-stellar_radius_solar
-stellar_luminosity_solar
-```
+python -m app.main refresh-pscomppars
+    → NASA TAP query
+    → data/raw/nasa_pscomppars/current/pscomppars.csv
+    → data/raw/nasa_pscomppars/current/snapshot.json
+### 2.2 Staging and domain publication
 
-#### System
+The committed CSV snapshot is loaded into a validated staging frame, then split into published domain tables. Invalid staging rows are never dropped silently.
 
 ```text
-system_id
-host_id
-star_count
-planet_count
-system_distance_pc
+data/raw/nasa_pscomppars/current/pscomppars.csv
+    → staging (is_valid, normalized names, gaia_source_id)
+    → exoplanets.parquet
+    → exoplanet_hosts.parquet
+    → exoplanet_systems.parquet
+    → review_invalid_exoplanet_rows.parquet
+    → review_host_stellar_conflicts.parquet
+    → review_system_planet_count_mismatches.parquet
 ```
+
+Entity IDs are stable search keys with a NASA prefix:
+
+```text
+nea:planet:<search_key(planet_name)>
+nea:host:<search_key(host_name)>
+nea:system:<search_key(host_name)>
+```
+
+For the current snapshot the expectations are 6336 planets, 4749 hosts, and 4749 provisional systems.
 
 #### Planet
+
+One row per valid staging planet. Each planet references both `host_id` and `system_id`.
 
 ```text
 planet_id
 system_id
+host_id
 planet_name
+planet_letter
 radius_earth
 mass_earth
-density
+mass_provenance
+density_g_cm3
+equilibrium_temperature_k
+insolation_earth
 orbital_period_days
 semi_major_axis_au
 eccentricity
-equilibrium_temperature_k
-insolation_earth
+inclination_deg
 discovery_method
 discovery_year
+discovery_facility
+is_controversial
+source
 ```
+
+#### Host
+
+One deterministic host per exact `host_name`. When multiple planet rows carry different stellar values, the pipeline keeps the row with the most complete stellar fields, breaking ties by ascending `planet_name` (`most_complete_then_planet_name`). Conflicting candidates stay in the review sink.
+
+```text
+host_id
+host_name
+hd_name
+hip_name
+tic_id
+gaia_dr3_designation
+gaia_source_id
+ra_deg
+dec_deg
+system_distance_pc
+star_count
+planet_count
+is_circumbinary
+stellar_temperature_k
+stellar_mass_solar
+stellar_radius_solar
+stellar_luminosity_log_solar
+stellar_fields_available
+stellar_source_planet_name
+stellar_selection_method
+stellar_values_conflict
+source
+```
+
+#### System
+
+One provisional system per exact host name (`system_grouping_method = exact_host_name`). `planet_count` is recomputed from published planet rows; NASA's archive `sy_pnum` is retained as `archive_planet_count` for audit.
+
+```text
+system_id
+host_id
+host_name
+star_count
+planet_count
+archive_planet_count
+planet_count_matches_archive
+system_distance_pc
+is_circumbinary
+system_grouping_method
+source
+```
+
+#### Review sinks
+
+| File | Reason |
+|---|---|
+| `review_invalid_exoplanet_rows.parquet` | Staging rows that failed identity, coordinate, system-count, or Gaia-ID validation |
+| `review_host_stellar_conflicts.parquet` | Every stellar candidate for hosts where planet rows disagree |
+| `review_system_planet_count_mismatches.parquet` | Exact-host planet counts that differ from NASA `sy_pnum` (for example broader systems split across exact host labels such as `55 Cnc` / `55 Cnc B`) |
+
+Current snapshot expectations: 0 invalid rows, 596 stellar-conflict candidate rows (211 hosts), and 14 system count mismatches.
 
 ### 2.3 Host Gaia-ID extraction
 
-The pipeline extracts distinct, valid Gaia DR3 IDs.
+Published hosts already carry normalized `gaia_source_id` values where the archive designation parses. A later enrichment step will extract the distinct IDs for batched Gaia retrieval:
 
 ```text
-PSCompPars rows
-    → normalize gaia_dr3_id
+exoplanet_hosts.parquet
+    → filter non-null gaia_source_id
     → deduplicate by source_id
     → write gaia_host_ids.parquet
 ```
@@ -205,10 +261,12 @@ The pipeline can resume without repeating successful chunks.
 ### Exoplanet validation
 
 - planet and host names are non-empty;
-- Gaia IDs are normalized consistently;
-- physical quantities are non-negative where required;
-- duplicate planet rows are resolved deterministically;
-- host/system/planet relationships are valid.
+- coordinates are present and within valid RA/Dec ranges;
+- archive star and planet counts are at least one;
+- Gaia designations either parse to a source ID or are null;
+- invalid staging rows go to `review_invalid_exoplanet_rows.parquet`;
+- host stellar conflicts and archive planet-count mismatches go to dedicated review sinks;
+- published planet foreign keys always resolve to host and system rows.
 
 ## 6. Distance selection
 

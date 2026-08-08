@@ -152,10 +152,11 @@ milky-way-explorer/
 
 ### Phase 2 — Exoplanet-first ingestion
 
-- Download `PSCompPars`.
-- Normalize planets, hosts, and systems.
-- Extract distinct Gaia DR3 host identifiers.
-- Produce the first readable named-star catalogue.
+- Download `PSCompPars` into a versioned raw snapshot.
+- Validate staging rows and publish planet, host, and system Parquet tables.
+- Keep review sinks for invalid rows, stellar conflicts, and archive count mismatches.
+- Carry normalized host `gaia_source_id` values for exact Gaia retrieval.
+- Produce the first readable named-star catalogue from identity naming sources.
 
 ### Phase 3 — Exact Gaia host retrieval
 

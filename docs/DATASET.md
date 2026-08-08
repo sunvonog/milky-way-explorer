@@ -123,11 +123,14 @@ The background query should remain minimal because every extra column increases 
 
 ## 5. NASA Exoplanet Archive fields
 
+Columns retrieved into the PSCompPars snapshot (`refresh-pscomppars`).
+
 ### 5.1 Identity and names
 
 ```text
 pl_name
 hostname
+pl_letter
 hd_name
 hip_name
 tic_id
@@ -142,6 +145,7 @@ dec
 sy_dist
 sy_snum
 sy_pnum
+cb_flag
 ```
 
 ### 5.3 Stellar properties
@@ -158,6 +162,7 @@ st_lum
 ```text
 pl_rade
 pl_bmasse
+pl_bmassprov
 pl_dens
 pl_eqt
 pl_insol
@@ -178,32 +183,56 @@ pl_orbincl
 discoverymethod
 disc_year
 disc_facility
+pl_controv_flag
 ```
 
 ## 6. Entity schemas
 
-### 6.1 Host
+Published PSCompPars domain tables use stable `nea:{kind}:{search_key}` identifiers. Gaia match metadata (`match_method`, `match_confidence`) and curated `display_name` / `name_source` fields are added later during host enrichment and naming publication; they are not part of the current domain outputs.
+
+Processed files:
 
 ```text
-host_id                 string
-hostname                string
-gaia_source_id          int64 nullable
-gaia_designation        string nullable
-hd_name                 string nullable
-hip_name                string nullable
-tic_id                   string nullable
-display_name            string
-name_source              string
-ra_deg                   float64
-dec_deg                  float64
-system_distance_pc       float64 nullable
-planet_count             int16
-star_count               int16
-match_method             string
-match_confidence         string
+data/processed/exoplanets.parquet
+data/processed/exoplanet_hosts.parquet
+data/processed/exoplanet_systems.parquet
+data/processed/review_invalid_exoplanet_rows.parquet
+data/processed/review_host_stellar_conflicts.parquet
+data/processed/review_system_planet_count_mismatches.parquet
+```
+
+### 6.1 Host (`exoplanet_hosts.parquet`)
+
+One row per exact NASA `host_name`. Stellar properties come from the selected planet-row candidate (`stellar_selection_method = most_complete_then_planet_name`).
+
+```text
+host_id                      string
+host_name                    string
+hd_name                      string nullable
+hip_name                     string nullable
+tic_id                       string nullable
+gaia_dr3_designation         string nullable
+gaia_source_id               int64 nullable
+ra_deg                       float64
+dec_deg                      float64
+system_distance_pc           float64 nullable
+star_count                   int16
+planet_count                 int16
+is_circumbinary              bool
+stellar_temperature_k        float64 nullable
+stellar_mass_solar           float64 nullable
+stellar_radius_solar         float64 nullable
+stellar_luminosity_log_solar float64 nullable
+stellar_fields_available     uint8
+stellar_source_planet_name   string
+stellar_selection_method     string
+stellar_values_conflict      bool
+source                       string
 ```
 
 ### 6.2 Gaia host source
+
+Future enrichment table keyed by `gaia_source_id`. Not published by the current PSCompPars domain flow.
 
 ```text
 gaia_source_id           int64
@@ -233,34 +262,47 @@ galactocentric_y_kpc     float32 nullable
 galactocentric_z_kpc     float32 nullable
 ```
 
-### 6.3 Planetary system
+### 6.3 Planetary system (`exoplanet_systems.parquet`)
+
+Provisional systems are host-scoped (`system_grouping_method = exact_host_name`). `planet_count` is derived from published planets; `archive_planet_count` is NASA `sy_pnum`.
 
 ```text
-system_id                string
-host_id                  string
-planet_count             int16
-star_count               int16
-system_distance_pc       float32 nullable
+system_id                      string
+host_id                        string
+host_name                      string
+star_count                     int16
+planet_count                   int16
+archive_planet_count           int16
+planet_count_matches_archive   bool
+system_distance_pc             float64 nullable
+is_circumbinary                bool
+system_grouping_method         string
+source                         string
 ```
 
-### 6.4 Planet
+### 6.4 Planet (`exoplanets.parquet`)
 
 ```text
-planet_id                string
-system_id                string
-planet_name              string
-radius_earth             float32 nullable
-mass_earth               float32 nullable
-density_g_cm3            float32 nullable
-equilibrium_temp_k       float32 nullable
-insolation_earth         float32 nullable
-orbital_period_days      float64 nullable
-semi_major_axis_au       float64 nullable
-eccentricity             float32 nullable
-inclination_deg          float32 nullable
-discovery_method         string nullable
-discovery_year           int16 nullable
-discovery_facility       string nullable
+planet_id                    string
+system_id                    string
+host_id                      string
+planet_name                  string
+planet_letter                string nullable
+radius_earth                 float64 nullable
+mass_earth                   float64 nullable
+mass_provenance              string nullable
+density_g_cm3                float64 nullable
+equilibrium_temperature_k    float64 nullable
+insolation_earth             float64 nullable
+orbital_period_days          float64 nullable
+semi_major_axis_au           float64 nullable
+eccentricity                 float64 nullable
+inclination_deg              float64 nullable
+discovery_method             string nullable
+discovery_year               int16 nullable
+discovery_facility           string nullable
+is_controversial             bool
+source                       string
 ```
 
 ### 6.5 Density cell

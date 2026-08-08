@@ -20,12 +20,16 @@ uv run python -m app.main                      # full canonical build
 uv run python -m app.main --strict             # fail on expectation misses
 uv run python -m app.main --log-level DEBUG
 uv run python -m app.main --log-json           # JSON on the console (CI)
-uv run python -m app.main refresh-snapshots    # maintainer-only snapshot refresh
+uv run python -m app.main refresh-snapshots    # maintainer-only naming snapshot refresh
+uv run python -m app.main refresh-pscomppars   # maintainer-only NASA PSCompPars refresh
 ```
 
-`refresh-snapshots` is intentionally **not** part of the build. It overwrites
-`data/raw/<source>/current/` from files in `pipelines/_inputs/` (or URLs).
-Review `git diff --stat data/raw/` and commit before rebuilding.
+`canonical_build` runs identity naming tables, then PSCompPars domain tables
+(`build-exoplanets`).
+
+`refresh-snapshots` and `refresh-pscomppars` are intentionally **not** part of
+the build. They overwrite `data/raw/<source>/current/`. Review
+`git diff --stat data/raw/` and commit before rebuilding.
 
 ## Configuration
 
@@ -64,8 +68,25 @@ app/
   runtime/             # logging, flow/task decorators, expect()
   loaders/             # pure CSV → DataFrame loaders
   sources/             # snapshot write helpers
+  exoplanets.py        # PSCompPars staging → domain / review tables
   names.py / resolve.py
 ```
+
+### PSCompPars outputs
+
+`build-exoplanets` reads `data/raw/nasa_pscomppars/current/pscomppars.csv` and
+writes:
+
+| File | Contents |
+|---|---|
+| `exoplanets.parquet` | One normalized planet per valid staging row |
+| `exoplanet_hosts.parquet` | One host per exact host name |
+| `exoplanet_systems.parquet` | One provisional system per exact host name |
+| `review_invalid_exoplanet_rows.parquet` | Staging validation failures |
+| `review_host_stellar_conflicts.parquet` | Conflicting stellar candidates |
+| `review_system_planet_count_mismatches.parquet` | Archive vs recomputed planet counts |
+
+All paths are under `data/processed/`.
 
 ## Adding a flow
 
