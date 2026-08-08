@@ -27,8 +27,8 @@ SOURCE = "nasa_pscomppars"
 SNAPSHOT_FILENAME = "pscomppars.csv"
 OUTPUT_FILENAMES = {
     "planets": "exoplanets.parquet",
-    "hosts": "exoplanets_hosts.parquet",
-    "systems": "exoplanets_systems.parquet",
+    "hosts": "exoplanet_hosts.parquet",
+    "systems": "exoplanet_systems.parquet",
     "invalid_rows": "review_invalid_exoplanet_rows.parquet",
     "stellar_conflicts": "review_host_stellar_conflicts.parquet",
     "system_count_mismatches": "review_system_planet_count_mismatches.parquet",

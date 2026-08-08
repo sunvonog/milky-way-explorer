@@ -22,7 +22,7 @@ from app.runtime.flow import flow
 
 @flow(name="canonical-build")
 def canonical_build() -> None:
-    """Parent flow: identity resolution, then future Gaia / density / publish steps."""
+    """Build identity and exoplanet publication tables."""
     build_identity()
     build_exoplanets()
     # future: gaia enrichment, density aggregation, publication

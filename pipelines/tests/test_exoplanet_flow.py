@@ -16,6 +16,15 @@ from app.sources.snapshot import snapshot_dir
 REPO_ROOT = Path(__file__).resolve().parents[2]
 SOURCE_SNAPSHOT = REPO_ROOT / "data" / "raw" / SOURCE / "current" / SNAPSHOT_FILENAME
 
+EXPECTED_FILENAMES = {
+    "planets": "exoplanets.parquet",
+    "hosts": "exoplanet_hosts.parquet",
+    "systems": "exoplanet_systems.parquet",
+    "invalid_rows": "review_invalid_exoplanet_rows.parquet",
+    "stellar_conflicts": "review_host_stellar_conflicts.parquet",
+    "system_count_mismatches": "review_system_planet_count_mismatches.parquet",
+}
+
 EXPECTED_ROWS = {
     "planets": 6336,
     "hosts": 4749,
@@ -40,6 +49,10 @@ def data_root(tmp_path: Path):
 
     yield tmp_path
     reset_settings()
+
+
+def test_output_filenames_are_stable():
+    assert OUTPUT_FILENAMES == EXPECTED_FILENAMES
 
 
 def test_build_writes_expected_parquet_files(data_root: Path):
