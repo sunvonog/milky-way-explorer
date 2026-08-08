@@ -5,7 +5,7 @@ import polars as pl
 import pytest
 
 from app.config import override_settings, reset_settings
-from app.exoplanets import build_hosts
+from app.domain.exoplanets import build_hosts
 from app.flows.gaia import (
     EXOPLANET_HOSTS_FILENAME,
     GAIA_HOST_IDS_FILENAME,

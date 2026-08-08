@@ -3,7 +3,7 @@ from pathlib import Path
 import polars as pl
 import pytest
 
-from app.exoplanets import (
+from app.domain.exoplanets import (
     build_hosts,
     build_planets,
     build_systems,

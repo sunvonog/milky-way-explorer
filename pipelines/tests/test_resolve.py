@@ -6,8 +6,8 @@ import polars as pl
 import pytest
 
 from app.config import REPO_ROOT
+from app.domain.identity import build_aliases, build_stars
 from app.loaders import iau_csn, wgsn_faints
-from app.resolve import build_aliases, build_stars
 
 IAU_CSV = REPO_ROOT / "data/raw/iau_csn/current/IAU-Catalog-of-Star-Names.csv"
 FAINTS_CSV = REPO_ROOT / "data/raw/wgsn_faints/current/WGSN-Faints.csv"
