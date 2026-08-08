@@ -168,16 +168,14 @@ Current snapshot expectations: 0 invalid rows, 596 stellar-conflict candidate ro
 
 ### 2.3 Host Gaia-ID extraction
 
-Published hosts already carry normalized `gaia_source_id` values where the archive designation parses. A later enrichment step will extract the distinct IDs for batched Gaia retrieval:
+The canonical build extracts the distinct, non-null Gaia IDs from the published
+host table:
 
 ```text
 exoplanet_hosts.parquet
     → filter non-null gaia_source_id
-    → deduplicate by source_id
-    → write gaia_host_ids.parquet
-```
-
-Hosts without Gaia IDs remain in the exoplanet dataset and may later be coordinate matched.
+    → deduplicate and sort by gaia_source_id
+    → gaia_host_ids.parquet
 
 ## 3. Exact Gaia host retrieval
 
