@@ -150,13 +150,14 @@ The API should not parse the entire render catalogue at startup.
 
 Responsibilities:
 
-- query `PSCompPars`;
-- preserve the raw response;
-- normalize host and planet identifiers;
-- extract distinct Gaia DR3 IDs;
-- produce host, system, and planet tables;
-- choose readable host names;
-- record unmatched hosts.
+- query `PSCompPars` into a versioned raw snapshot;
+- load and validate staging rows without dropping failures silently;
+- publish `exoplanets`, `exoplanet_hosts`, and `exoplanet_systems` Parquet tables;
+- assign stable `nea:{kind}:{search_key}` identifiers;
+- select deterministic host stellar properties when planet rows conflict;
+- group provisional systems by exact host name;
+- write review sinks for invalid rows, stellar conflicts, and archive planet-count mismatches;
+- expose host `gaia_source_id` values for later exact Gaia enrichment.
 
 ### 4.4 Gaia host-enrichment pipeline
 
@@ -189,14 +190,16 @@ DuckDB queries Parquet directly.
 Primary tables:
 
 ```text
-hosts
-systems
-planets
+exoplanet_hosts
+exoplanet_systems
+exoplanets
 gaia_host_sources
 named_sources
 gaia_density_cells
 dataset_builds
 ```
+
+Review tables remain analytical side channels (`review_*`) and are not required for the public API.
 
 ### 4.7 Static data delivery
 

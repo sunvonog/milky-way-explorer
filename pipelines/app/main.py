@@ -14,7 +14,7 @@ import argparse
 import sys
 
 from app.config import override_settings
-from app.flows.exoplanets import refresh_pscomppars
+from app.flows.exoplanets import build_exoplanets, refresh_pscomppars
 from app.flows.identity import build_identity
 from app.flows.snapshots import refresh_snapshots
 from app.runtime.flow import flow
@@ -22,8 +22,9 @@ from app.runtime.flow import flow
 
 @flow(name="canonical-build")
 def canonical_build() -> None:
-    """Parent flow: identity resolution, then future Gaia / density / publish steps."""
+    """Build identity and exoplanet publication tables."""
     build_identity()
+    build_exoplanets()
     # future: gaia enrichment, density aggregation, publication
 
 
