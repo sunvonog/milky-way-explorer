@@ -23,7 +23,7 @@ from app.runtime.flow import flow
 
 @flow(name="canonical-build")
 def canonical_build() -> None:
-    """Build identity and exoplanet publication tables."""
+    """Build identity, exoplanet and Gaia retrieval-manifest tables."""
     build_identity()
     build_exoplanets()
     build_gaia_host_manifest()

@@ -160,3 +160,16 @@ def test_download_gaia_host_batch_cleans_up_failed_job(tmp_path: Path):
 
     assert not destination.exists()
     assert not partial.exists()
+
+
+def test_download_gaia_host_batch_rejects_missing_output(tmp_path: Path):
+    batch = GaiaHostBatch(batch_number=4, source_ids=(7,))
+    destination = tmp_path / "gaia-host-0004.csv"
+    partial = tmp_path / ".gaia-host-0004.csv.part"
+    client = FakeGaiaClient(write_output=False)
+
+    with pytest.raises(RuntimeError, match="did not produce an output file"):
+        download_gaia_host_batch(batch, destination, client=client)
+
+    assert not destination.exists()
+    assert not partial.exists()

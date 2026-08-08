@@ -21,7 +21,7 @@ def isolated_settings(tmp_path: Path) -> Iterator[None]:
     reset_settings()
 
 
-def test_canonical_build_runs_identity_then_exoplanets(monkeypatch: pytest.MonkeyPatch):
+def test_canonical_build_runs_publication_flows_in_order(monkeypatch: pytest.MonkeyPatch):
     calls: list[str] = []
 
     def record_identity():
