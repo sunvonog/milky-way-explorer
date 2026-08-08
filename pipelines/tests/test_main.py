@@ -31,9 +31,14 @@ def test_canonical_build_runs_identity_then_exoplanets(monkeypatch: pytest.Monke
         calls.append("exoplanets")
         return {}
 
+    def record_gaia_host_manifest() -> Path:
+        calls.append("gaia-host-manifest")
+        return Path("gaia_host_ids.parquet")
+
     monkeypatch.setattr(pipeline_main, "build_identity", record_identity)
     monkeypatch.setattr(pipeline_main, "build_exoplanets", record_exoplanets)
+    monkeypatch.setattr(pipeline_main, "build_gaia_host_manifest", record_gaia_host_manifest)
 
     pipeline_main.canonical_build()
 
-    assert calls == ["identity", "exoplanets"]
+    assert calls == ["identity", "exoplanets", "gaia-host-manifest"]
