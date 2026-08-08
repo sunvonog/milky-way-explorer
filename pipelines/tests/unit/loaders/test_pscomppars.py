@@ -1,10 +1,8 @@
-from pathlib import Path
-
 import polars as pl
 
+from app.config import REPO_ROOT
 from app.loaders.pscomppars import RAW_SCHEMA, load, normalize
 
-REPO_ROOT = Path(__file__).resolve().parents[2]
 SNAPSHOT = REPO_ROOT / "data" / "raw" / "nasa_pscomppars" / "current" / "pscomppars.csv"
 
 
