@@ -6,8 +6,10 @@ import pytest
 from app.exoplanets import (
     build_hosts,
     build_planets,
+    build_systems,
     review_host_stellar_conflicts,
     review_invalid_planet_rows,
+    review_system_planet_count_mismatches,
 )
 from app.loaders.pscomppars import load
 
@@ -31,8 +33,18 @@ def hosts(staging: pl.DataFrame) -> pl.DataFrame:
 
 
 @pytest.fixture(scope="module")
+def systems(hosts: pl.DataFrame, planets: pl.DataFrame) -> pl.DataFrame:
+    return build_systems(hosts, planets)
+
+
+@pytest.fixture(scope="module")
 def stellar_conflicts(staging: pl.DataFrame) -> pl.DataFrame:
     return review_host_stellar_conflicts(staging)
+
+
+@pytest.fixture(scope="module")
+def system_count_mismatches(systems: pl.DataFrame) -> pl.DataFrame:
+    return review_system_planet_count_mismatches(systems)
 
 
 def test_builds_one_record_per_planet(planets: pl.DataFrame):
@@ -132,3 +144,54 @@ def test_stellar_conflicts_are_preserved_for_review(
 
     assert fifty_five_cnc.height == 5
     assert fifty_five_cnc.filter(pl.col("is_selected"))["source_planet_name"][0] == "55 Cnc b"
+
+
+def test_builds_one_system_per_exact_host(systems: pl.DataFrame):
+    assert systems.height == 4749
+    assert systems["system_id"].n_unique() == 4749
+    assert systems["host_id"].n_unique() == 4749
+
+    assert systems["system_id"].str.starts_with("nea:system:").all()
+
+    assert systems["system_grouping_method"].unique().to_list() == ["exact_host_name"]
+
+
+def test_all_planets_reference_a_system(planets: pl.DataFrame, systems: pl.DataFrame):
+    missing = planets.join(systems.select("system_id"), on="system_id", how="anti")
+
+    assert missing.is_empty()
+    assert int(systems["planet_count"].sum()) == planets.height
+
+
+def test_system_counts_are_computed_from_planet_rows(systems: pl.DataFrame, planets: pl.DataFrame):
+    actual = planets.group_by("system_id").agg(pl.len().alias("actual_planet_count"))
+
+    differences = systems.join(actual, on="system_id", how="left").filter(
+        pl.col("planet_count") != pl.col("actual_planet_count")
+    )
+
+    assert differences.is_empty()
+
+
+def test_archive_count_mismatches_are_preserved_for_review(
+    systems: pl.DataFrame, system_count_mismatches: pl.DataFrame
+):
+    assert int(systems["planet_count_matches_archive"].sum()) == 4735
+    assert system_count_mismatches.height == 14
+    fifty_five_cnc = system_count_mismatches.filter(
+        pl.col("host_name").is_in(["55 Cnc", "55 Cnc B"])
+    ).sort("host_name")
+
+    assert fifty_five_cnc.height == 2
+    assert int(fifty_five_cnc["planet_count"].sum()) == 7
+    assert fifty_five_cnc["archive_planet_count"].unique().to_list() == [7]
+
+
+def test_known_system_record(systems: pl.DataFrame):
+    system = systems.filter(pl.col("host_name") == "11 Com").row(0, named=True)
+
+    assert system["system_id"] == "nea:system:11com"
+    assert system["host_id"] == "nea:host:11com"
+    assert system["planet_count"] == 1
+    assert system["archive_planet_count"] == 1
+    assert system["planet_count_matches_archive"] is True

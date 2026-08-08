@@ -185,3 +185,75 @@ def review_host_stellar_conflicts(
         )
         .sort(["host_name", "source_planet_name"])
     )
+
+
+def build_systems(
+    hosts: pl.DataFrame,
+    planets: pl.DataFrame,
+) -> pl.DataFrame:
+    """Build one provisional system per exact host name."""
+    planet_counts = planets.group_by("host_id").agg(pl.len().cast(pl.Int16).alias("planet_count"))
+
+    systems = (
+        hosts.select(
+            "host_id",
+            "host_name",
+            "system_distance_pc",
+            "star_count",
+            pl.col("planet_count").alias("archive_planet_count"),
+            "is_circumbinary",
+            "source",
+        )
+        .with_columns(system_id=_entity_id("system", "host_name"))
+        .join(planet_counts, on="host_id", how="left")
+        .with_columns(
+            planet_count=(pl.col("planet_count").fill_null(0).cast(pl.Int16)),
+            system_grouping_method=pl.lit("exact_host_name"),
+        )
+        .with_columns(
+            planet_count_matches_archive=(pl.col("planet_count") == pl.col("archive_planet_count"))
+        )
+    )
+
+    return systems.select(
+        "system_id",
+        "host_id",
+        "host_name",
+        "star_count",
+        "planet_count",
+        "archive_planet_count",
+        "planet_count_matches_archive",
+        "system_distance_pc",
+        "is_circumbinary",
+        "system_grouping_method",
+        "source",
+    ).sort("host_name")
+
+
+def review_system_planet_count_mismatches(
+    systems: pl.DataFrame,
+) -> pl.DataFrame:
+    """Retain systems whose exact-host rows differ from NASA's count."""
+    return (
+        systems.filter(~pl.col("planet_count_matches_archive"))
+        .with_columns(
+            planet_count_difference=(pl.col("planet_count") - pl.col("archive_planet_count")),
+            review_reason=pl.lit(
+                "archive system planet count differs from rows grouped by exact host name"
+            ),
+        )
+        .select(
+            "system_id",
+            "host_id",
+            "host_name",
+            "star_count",
+            "planet_count",
+            "archive_planet_count",
+            "planet_count_difference",
+            "is_circumbinary",
+            "system_grouping_method",
+            "review_reason",
+            "source",
+        )
+        .sort("host_name")
+    )
