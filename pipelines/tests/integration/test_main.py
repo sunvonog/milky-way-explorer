@@ -42,3 +42,20 @@ def test_canonical_build_runs_publication_flows_in_order(monkeypatch: pytest.Mon
     pipeline_main.canonical_build()
 
     assert calls == ["identity", "exoplanets", "gaia-host-manifest"]
+
+
+def test_main_runs_gaia_host_refresh(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    calls: list[str] = []
+
+    def record_gaia_host_refresh() -> Path:
+        calls.append("gaia-host-refresh")
+        return Path("data/raw/gaia_hosts/current")
+
+    monkeypatch.setattr(pipeline_main, "refresh_gaia_hosts", record_gaia_host_refresh)
+
+    result = pipeline_main.main(["refresh-gaia-hosts"])
+
+    assert result == 0
+    assert calls == ["gaia-host-refresh"]
