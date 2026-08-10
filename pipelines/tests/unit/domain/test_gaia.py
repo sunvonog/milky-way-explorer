@@ -7,6 +7,7 @@ from app.domain.exoplanets import build_hosts
 from app.domain.gaia import (
     GaiaHostBatch,
     add_gaia_distance,
+    add_heliocentric_coordinates,
     build_gaia_host_ids,
     build_gaia_host_sources,
     plan_gaia_host_batches,
@@ -155,5 +156,52 @@ def test_build_gaia_host_sources_matches_current_snapshot():
     assert sources.height == 4396
     assert sources["gaia_source_id"].n_unique() == 4396
     assert sources["distance_pc"].null_count() == 109
+    assert sources["heliocentric_x_pc"].null_count() == 109
+    assert sources["heliocentric_y_pc"].null_count() == 109
+    assert sources["heliocentric_z_pc"].null_count() == 109
     assert method_counts == {"gaia_gspphot": 3887, "inverse_parallax": 400, "unavailable": 109}
     assert "is_valid" not in sources.columns
+
+
+def test_heliocentric_coordinates_use_sun_as_origin():
+    frame = pl.DataFrame(
+        {
+            "galactic_longitude_deg": [
+                0.0,
+                90.0,
+                0.0,
+                180.0,
+                0.0,
+            ],
+            "galactic_latitude_deg": [
+                0.0,
+                0.0,
+                90.0,
+                0.0,
+                0.0,
+            ],
+            "distance_pc": [10.0, 10.0, 10.0, 10.0, None],
+        }
+    )
+
+    rows = add_heliocentric_coordinates(frame).to_dicts()
+
+    assert rows[0]["heliocentric_x_pc"] == pytest.approx(10.0)
+    assert rows[0]["heliocentric_y_pc"] == pytest.approx(0.0, abs=1e-12)
+    assert rows[0]["heliocentric_z_pc"] == pytest.approx(0.0, abs=1e-12)
+
+    assert rows[1]["heliocentric_x_pc"] == pytest.approx(0.0, abs=1e-12)
+    assert rows[1]["heliocentric_y_pc"] == pytest.approx(10.0)
+    assert rows[1]["heliocentric_z_pc"] == pytest.approx(0.0, abs=1e-12)
+
+    assert rows[2]["heliocentric_x_pc"] == pytest.approx(0.0, abs=1e-12)
+    assert rows[2]["heliocentric_y_pc"] == pytest.approx(0.0, abs=1e-12)
+    assert rows[2]["heliocentric_z_pc"] == pytest.approx(10.0)
+
+    assert rows[3]["heliocentric_x_pc"] == pytest.approx(-10.0)
+    assert rows[3]["heliocentric_y_pc"] == pytest.approx(0.0, abs=1e-12)
+    assert rows[3]["heliocentric_z_pc"] == pytest.approx(0.0, abs=1e-12)
+
+    assert rows[4]["heliocentric_x_pc"] is None
+    assert rows[4]["heliocentric_y_pc"] is None
+    assert rows[4]["heliocentric_z_pc"] is None

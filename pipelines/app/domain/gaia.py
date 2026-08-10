@@ -3,8 +3,11 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from math import pi
 
 import polars as pl
+
+_DEGREES_TO_RADIANS = pi / 180.0
 
 GAIA_HOST_SOURCE_COLUMNS = (
     "gaia_source_id",
@@ -43,6 +46,9 @@ GAIA_HOST_SOURCE_COLUMNS = (
     "distance_upper_pc",
     "distance_method",
     "distance_quality",
+    "heliocentric_x_pc",
+    "heliocentric_y_pc",
+    "heliocentric_z_pc",
     "source",
 )
 
@@ -145,6 +151,20 @@ def build_gaia_host_sources(staging: pl.DataFrame) -> pl.DataFrame:
     return (
         staging.filter(pl.col("is_valid"))
         .pipe(add_gaia_distance)
+        .pipe(add_heliocentric_coordinates)
         .select(*GAIA_HOST_SOURCE_COLUMNS)
         .sort("gaia_source_id")
+    )
+
+
+def add_heliocentric_coordinates(frame: pl.DataFrame) -> pl.DataFrame:
+    """Add sun-centred Galactic Cartesian coordinates in parsec."""
+    longitude_rad = pl.col("galactic_longitude_deg") * _DEGREES_TO_RADIANS
+    latitude_rad = pl.col("galactic_latitude_deg") * _DEGREES_TO_RADIANS
+    distance = pl.col("distance_pc")
+
+    return frame.with_columns(
+        heliocentric_x_pc=(distance * latitude_rad.cos() * longitude_rad.cos()),
+        heliocentric_y_pc=(distance * latitude_rad.cos() * longitude_rad.sin()),
+        heliocentric_z_pc=(distance * latitude_rad.sin()),
     )
