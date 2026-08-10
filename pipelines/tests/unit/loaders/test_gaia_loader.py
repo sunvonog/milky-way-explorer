@@ -3,8 +3,11 @@ from pathlib import Path
 import polars as pl
 import pytest
 
+from app.config import REPO_ROOT
 from app.loaders import gaia
 from app.sources.gaia import GAIA_HOST_COLUMNS
+
+CURRENT_SNAPSHOT = REPO_ROOT / "data" / "raw" / "gaia_hosts" / "current"
 
 
 def _raw_row(
@@ -124,3 +127,12 @@ def test_load_rejects_snapshot_without_batches(tmp_path: Path):
 
 def test_raw_schema_matches_gaia_query_columns():
     assert tuple(gaia.RAW_SCHEMA) == GAIA_HOST_COLUMNS
+
+
+def test_current_gaia_host_snapshot_contract():
+    frame = gaia.load(CURRENT_SNAPSHOT)
+
+    assert len(list((CURRENT_SNAPSHOT / "batches").glob("gaia-host-*.csv"))) == 9
+    assert frame.height == 4396
+    assert frame["gaia_source_id"].n_unique() == 4396
+    assert int(frame["is_valid"].sum()) == 4396
