@@ -2,7 +2,16 @@
 
 ## 1. Current observation
 
-The current pipeline successfully retrieves 10,000 Gaia sources but fails when attempting the planned approximately 181,000-source sample.
+Exact Gaia retrieval for exoplanet hosts is implemented as a maintainer-only
+refresh: `python -m app.main refresh-gaia-hosts`. It queries known Gaia DR3
+`source_id` values in batches of 500, writes CSV batches to a temporary staging
+directory, and promotes them as one multi-file snapshot under
+`data/raw/gaia_hosts/current/`. The canonical build then loads that snapshot into
+`gaia_host_sources.parquet` without contacting Gaia.
+
+The separate background-density path is still constrained. The current pipeline
+successfully retrieves 10,000 Gaia sources but fails when attempting the planned
+approximately 181,000-source sample.
 
 The exact cause cannot be determined without the complete error message and query/job status. However, **10,000 rows is not the official anonymous asynchronous Gaia limit**.
 
@@ -191,9 +200,7 @@ def download_gaia_query(
     phase = job.get_phase()
 
     if phase != "COMPLETED":
-        raise RuntimeError(
-            f"Gaia job {job.jobid} ended with phase {phase}."
-        )
+        raise RuntimeError(f"Gaia job {job.jobid} ended with phase {phase}.")
 
     if not output_path.exists():
         raise FileNotFoundError(
@@ -254,10 +261,10 @@ Start with:
 
 1. the existing 10,000-source sample for the density-pipeline proof;
 2. the complete NASA exoplanet catalogue;
-3. exact Gaia retrieval for exoplanet host IDs;
+3. exact Gaia retrieval for exoplanet host IDs (implemented: `refresh-gaia-hosts` + committed `gaia_hosts` snapshot);
 4. chunked Gaia jobs for expanding the density background later.
 
-The exact host dataset is likely much smaller and more valuable than a large random point sample.
+The exact host dataset is smaller and more valuable than a large random point sample. Keep host refreshes maintainer-only and commit the multi-file snapshot before rebuilding.
 
 ## 7. Required diagnostic information
 

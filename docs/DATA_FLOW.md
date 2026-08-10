@@ -57,6 +57,8 @@ python -m app.main refresh-pscomppars
     → NASA TAP query
     → data/raw/nasa_pscomppars/current/pscomppars.csv
     → data/raw/nasa_pscomppars/current/snapshot.json
+```
+
 ### 2.2 Staging and domain publication
 
 The committed CSV snapshot is loaded into a validated staging frame, then split into published domain tables. Invalid staging rows are never dropped silently.
@@ -176,33 +178,51 @@ exoplanet_hosts.parquet
     → filter non-null gaia_source_id
     → deduplicate and sort by gaia_source_id
     → gaia_host_ids.parquet
+```
 
 ## 3. Exact Gaia host retrieval
 
-The host-ID list is split into bounded batches.
+Exact host enrichment is split into a maintainer-only refresh and an offline
+canonical publish step. The current manifest contains 4,396 distinct Gaia DR3
+source IDs.
+
+### 3.1 Maintainer refresh
+
+`python -m app.main refresh-gaia-hosts` divides the committed ID manifest into
+batches of 500 and submits asynchronous Gaia TAP jobs with direct CSV output.
+All batches are written to a temporary staging directory, then promoted as one
+failure-safe multi-file snapshot.
 
 ```text
-Batch 1: source IDs 1–N
-Batch 2: source IDs N+1–2N
-...
+gaia_host_ids.parquet
+    → 9 deterministic batches (500 IDs each; last batch smaller)
+    → Gaia asynchronous TAP jobs (CSV)
+    → temporary staging directory
+    → data/raw/gaia_hosts/current/
+         batches/gaia-host-0001.csv … gaia-host-0009.csv
+         snapshot.json   # tree checksum + per-file digests
 ```
 
-Each batch queries only the required Gaia columns.
+Each batch queries only the required Gaia columns. Interrupted refreshes never
+leave a half-written `current/` directory for the build to read.
 
-The preferred match order is:
+### 3.2 Canonical publish
 
-1. exact Gaia DR3 ID;
-2. verified external identifier;
-3. coordinate match with stored angular separation;
-4. unmatched exoplanet host.
+The normal build consumes the committed snapshot and does not contact Gaia:
 
-Every result records:
+```text
+data/raw/gaia_hosts/current/
+    → combine and validate all batch CSVs
+    → select distance with explicit method and quality
+    → gaia_host_sources.parquet
+```
 
-- match method;
-- match confidence;
-- Gaia release;
-- source ID;
-- source query batch ID.
+Current expectations: 4,396 published sources, of which 109 have
+`distance_method = unavailable`.
+
+Fallback matching (external identifiers, coordinate matches) is not part of
+this flow. Hosts without an exact Gaia ID remain on the NASA host table until a
+reviewed fallback path is added.
 
 ## 4. Gaia background retrieval
 
@@ -268,17 +288,16 @@ The pipeline can resume without repeating successful chunks.
 
 ## 6. Distance selection
 
-The top-down views require distance estimates.
-
-Recommended priority:
+The top-down views require distance estimates. Exact Gaia host sources use this
+priority:
 
 ```text
-1. Gaia GSP-Phot distance, when available and accepted
-2. inverse positive parallax with configured quality criteria
+1. Gaia GSP-Phot distance when distance_gspphot_pc is present and positive
+2. inverse positive parallax when parallax_over_error >= 5 and RUWE is null or < 1.4
 3. unavailable
 ```
 
-Every source stores:
+Every published Gaia host source stores:
 
 ```text
 distance_pc
