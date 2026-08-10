@@ -161,15 +161,20 @@ Responsibilities:
 
 ### 4.4 Gaia host-enrichment pipeline
 
-Responsibilities:
+Implemented responsibilities:
 
-- query exact Gaia source IDs in batches;
-- retrieve only required columns;
-- preserve raw responses;
-- deduplicate by `source_id`;
-- calculate quality flags;
+- query exact Gaia DR3 source IDs in deterministic batches;
+- retrieve only the required columns;
+- publish a failure-safe committed multi-file snapshot;
+- combine and validate all batches;
+- retain distance provenance;
+- publish `gaia_host_sources.parquet`.
+
+Future responsibilities:
+
 - calculate heliocentric and Galactocentric positions;
-- create compact render records.
+- create compact render records;
+- add reviewed fallback matching where an exact Gaia ID is unavailable.
 
 ### 4.5 Gaia background pipeline
 

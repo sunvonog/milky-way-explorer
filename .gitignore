@@ -28,6 +28,7 @@ data/**
 !data/raw/wgsn_faints/**
 !data/raw/exoplanet_names/**
 !data/raw/nasa_pscomppars/**
+!data/raw/gaia_hosts/**
 pipelines/_inputs/**
 
 # small, intentional fixtures live with the tests instead

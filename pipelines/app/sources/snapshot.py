@@ -46,6 +46,27 @@ def snapshot_dir(raw_root: Path, source: str) -> Path:
     return raw_root / source / CURRENT
 
 
+def _promote_current(staged: Path, destination: Path):
+    """Replace the current directory while retaining rollback on failure."""
+    previous: Path | None = None
+
+    try:
+        if destination.exists():
+            previous = destination.with_name(f".{CURRENT}.old-{staged.name}")
+            destination.rename(previous)
+
+        staged.rename(destination)
+    except BaseException:
+        if previous is not None and previous.exists():
+            if destination.exists():
+                shutil.rmtree(destination, ignore_errors=True)
+            previous.rename(destination)
+        raise
+    else:
+        if previous is not None:
+            shutil.rmtree(previous, ignore_errors=True)
+
+
 def _write_current(
     payload: bytes, filename: str, source: str, raw_root: Path, *, origin: str, fetched_online: bool
 ) -> Path:
@@ -74,13 +95,7 @@ def _write_current(
         (tmp / "snapshot.json").write_text(json.dumps(meta, indent=2) + "\n", encoding="utf-8")
 
         # atomic replace of the whole directory
-        if dest.exists():
-            old = dest.with_name(f".{CURRENT}.old-{tmp.name}")
-            dest.rename(old)
-            tmp.rename(dest)
-            shutil.rmtree(old)
-        else:
-            tmp.rename(dest)
+        _promote_current(tmp, dest)
 
     except BaseException:
         shutil.rmtree(tmp, ignore_errors=True)
@@ -142,3 +157,79 @@ def snapshot_url(
 
     name = filename or Path(url).name or f"{source}.csv"
     return _write_current(payload, name, source, raw_root, origin=url, fetched_online=True)
+
+
+def snapshot_directory(
+    source_dir: Path,
+    source: str,
+    raw_root: Path,
+    *,
+    origin: str,
+    fetched_online: bool,
+) -> Path:
+    """Publish a staged directory as one failure-safe current snapshot."""
+    if not source_dir.is_dir():
+        raise NotADirectoryError(f"snapshot source directory not found: {source_dir}")
+
+    source_files = sorted(
+        (path for path in source_dir.rglob("*") if path.is_file()),
+        key=lambda path: path.relative_to(source_dir).as_posix(),
+    )
+
+    if not source_files:
+        raise ValueError("snapshot directory must contain at least one file")
+
+    relative_paths = [path.relative_to(source_dir) for path in source_files]
+
+    if Path("snapshot.json") in relative_paths:
+        raise ValueError("snapshot.json is reserved for snapshot metadata")
+
+    destination = snapshot_dir(raw_root, source)
+    destination.parent.mkdir(parents=True, exist_ok=True)
+
+    staged = Path(tempfile.mkdtemp(dir=destination.parent, prefix=f".{CURRENT}.tmp-"))
+
+    try:
+        for source_path, relative_path in zip(source_files, relative_paths, strict=True):
+            target = staged / relative_path
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(source_path, target)
+
+        files: list[dict[str, object]] = []
+        total_bytes = 0
+        tree_digest = hashlib.sha256()
+
+        for relative_path in relative_paths:
+            path = staged / relative_path
+            payload = path.read_bytes()
+            relative_name = relative_path.as_posix()
+
+            files.append({"path": relative_name, "sha256": _sha256(payload), "bytes": len(payload)})
+
+            total_bytes += len(payload)
+            tree_digest.update(relative_name.encode("utf-8"))
+            tree_digest.update(b"\0")
+            tree_digest.update(payload)
+            tree_digest.update(b"\0")
+
+        metadata = {
+            "source": source,
+            "origin": origin,
+            "fetched_at": datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ"),
+            "fetched_online": fetched_online,
+            "sha256": tree_digest.hexdigest(),
+            "bytes": total_bytes,
+            "files": files,
+        }
+
+        (staged / "snapshot.json").write_text(
+            json.dumps(metadata, indent=2) + "\n",
+            encoding="utf-8",
+        )
+
+        _promote_current(staged, destination)
+    except BaseException:
+        shutil.rmtree(staged, ignore_errors=True)
+        raise
+
+    return destination

@@ -1,0 +1,55 @@
+{
+  "source": "gaia_hosts",
+  "origin": "Gaia DR3 async TAP",
+  "fetched_at": "20260810T105052Z",
+  "fetched_online": true,
+  "sha256": "1e009edba9004261a18f254e4849b4ab5e8ad28189852df77f73d22328435a83",
+  "bytes": 1611931,
+  "files": [
+    {
+      "path": "batches/gaia-host-0001.csv",
+      "sha256": "889d13a306c40e1dcdd1f2b5d92fcde0e007b3c959bf94e4aad3d1dd307177c0",
+      "bytes": 182789
+    },
+    {
+      "path": "batches/gaia-host-0002.csv",
+      "sha256": "320a9ff62ccc57115a241e6bca49327789f675f14b6a3b71537c6761a3689bd7",
+      "bytes": 182417
+    },
+    {
+      "path": "batches/gaia-host-0003.csv",
+      "sha256": "0d2e12a9fd7f7276458ecffff584e9ab80696aade8ad22399af721a61d596743",
+      "bytes": 182862
+    },
+    {
+      "path": "batches/gaia-host-0004.csv",
+      "sha256": "13c9a21d9df65d46eec044032f9266299a30737786870ef2a5d3ee8a5614500d",
+      "bytes": 182401
+    },
+    {
+      "path": "batches/gaia-host-0005.csv",
+      "sha256": "0b0ad480c6fa43bc8c4bf641467eb0e551c28de9972b4a03c3cb0808ab0c132d",
+      "bytes": 182985
+    },
+    {
+      "path": "batches/gaia-host-0006.csv",
+      "sha256": "4d624766747eeacc0f0d3f283f2454b93e14d6132742a60c0104086d31ecfd44",
+      "bytes": 183862
+    },
+    {
+      "path": "batches/gaia-host-0007.csv",
+      "sha256": "4faad7b0bd60bfe398b0c81a0ef61fe26e92a3ab79c603092669123ef2e2e14b",
+      "bytes": 184321
+    },
+    {
+      "path": "batches/gaia-host-0008.csv",
+      "sha256": "23cd3db6c5198cee00cc858ede23cd27afe6d5491bcb1e0b8cb605ac4c56857f",
+      "bytes": 183988
+    },
+    {
+      "path": "batches/gaia-host-0009.csv",
+      "sha256": "35b1da8378cf5bf7c7cc2c3d70a3656188eac4fa0a3c61167108ab7a75255bd4",
+      "bytes": 146306
+    }
+  ]
+}

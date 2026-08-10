@@ -23,15 +23,17 @@ uv run python -m app.main --log-level DEBUG
 uv run python -m app.main --log-json           # JSON on the console (CI)
 uv run python -m app.main refresh-snapshots    # maintainer-only naming snapshot refresh
 uv run python -m app.main refresh-pscomppars   # maintainer-only NASA PSCompPars refresh
+uv run python -m app.main refresh-gaia-hosts   # maintainer-only Gaia retrieval refresh
 ```
 
-`canonical_build` builds the identity tables, PSCompPars domain tables, and the
-Gaia host-ID retrieval manifest. It consumes committed snapshots and does not
-contact external services.
+`canonical_build` builds the identity tables, PSCompPars domain tables, the Gaia
+host-ID retrieval manifest, and `gaia_host_sources.parquet`. It consumes
+committed snapshots and does not contact external services.
 
-`refresh-snapshots` and `refresh-pscomppars` are intentionally **not** part of
-the build. They overwrite `data/raw/<source>/current/`. Review
-`git diff --stat data/raw/` and commit before rebuilding.
+`refresh-snapshots`, `refresh-pscomppars`, and `refresh-gaia-hosts` are
+maintainer-only operations and are intentionally **not** part of the canonical
+build. They replace `data/raw/<source>/current/`. Review and commit the snapshot
+changes before rebuilding.
 
 ## Configuration
 
@@ -103,6 +105,18 @@ writes:
 | `gaia_host_ids.parquet` | Sorted, distinct Gaia DR3 IDs required for exact host retrieval |
 
 All paths are under `data/processed/`.
+
+### Gaia host outputs
+
+`refresh-gaia-hosts` writes a multi-file snapshot under
+`data/raw/gaia_hosts/current/` (`batches/gaia-host-*.csv` plus `snapshot.json`).
+`build-gaia-hosts` (part of the canonical build) reads that snapshot and writes:
+
+| File | Contents |
+|---|---|
+| `gaia_host_sources.parquet` | One validated Gaia DR3 source per host-ID manifest entry, with distance provenance |
+
+Current expectations: 4,396 sources; 109 without an accepted distance.
 
 ## Adding a flow
 

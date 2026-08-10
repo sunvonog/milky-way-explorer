@@ -188,7 +188,11 @@ pl_controv_flag
 
 ## 6. Entity schemas
 
-Published PSCompPars domain tables use stable `nea:{kind}:{search_key}` identifiers. Gaia match metadata (`match_method`, `match_confidence`) and curated `display_name` / `name_source` fields are added later during host enrichment and naming publication; they are not part of the current domain outputs.
+Published PSCompPars domain tables use stable `nea:{kind}:{search_key}` identifiers.
+Exact Gaia host enrichment is a separate canonical step that publishes
+`gaia_host_sources.parquet` from the committed `gaia_hosts` snapshot. Curated
+`display_name` / `name_source` fields and fallback match metadata remain later
+work.
 
 Processed files:
 
@@ -196,6 +200,8 @@ Processed files:
 data/processed/exoplanets.parquet
 data/processed/exoplanet_hosts.parquet
 data/processed/exoplanet_systems.parquet
+data/processed/gaia_host_ids.parquet
+data/processed/gaia_host_sources.parquet
 data/processed/review_invalid_exoplanet_rows.parquet
 data/processed/review_host_stellar_conflicts.parquet
 data/processed/review_system_planet_count_mismatches.parquet
@@ -230,36 +236,54 @@ stellar_values_conflict      bool
 source                       string
 ```
 
-### 6.2 Gaia host source
+### 6.2 Gaia host source (`gaia_host_sources.parquet`)
 
-Future enrichment table keyed by `gaia_source_id`. Not published by the current PSCompPars domain flow.
+Published by the canonical build from the committed multi-file snapshot at
+`data/raw/gaia_hosts/current/`. One row per exact Gaia DR3 source ID from the
+host-ID manifest. Distance fields are selected offline with explicit method and
+quality provenance. Heliocentric and Galactocentric coordinates are not yet
+computed.
+
+Current expectations: 4,396 rows; 109 with `distance_method = unavailable`.
 
 ```text
-gaia_source_id           int64
-ref_epoch                float32
-ra_deg                   float64
-dec_deg                  float64
-galactic_l_deg           float64
-galactic_b_deg           float64
-parallax_mas             float32 nullable
-parallax_error_mas       float32 nullable
-parallax_over_error      float32 nullable
-pmra_mas_year            float32 nullable
-pmdec_mas_year           float32 nullable
-radial_velocity_kms      float32 nullable
-g_magnitude              float32 nullable
-bp_rp                    float32 nullable
-temperature_k            float32 nullable
-ruwe                      float32 nullable
-distance_pc              float32 nullable
-distance_method          string
-distance_quality         string
-heliocentric_x_pc        float32 nullable
-heliocentric_y_pc        float32 nullable
-heliocentric_z_pc        float32 nullable
-galactocentric_x_kpc     float32 nullable
-galactocentric_y_kpc     float32 nullable
-galactocentric_z_kpc     float32 nullable
+gaia_source_id                         int64
+gaia_dr3_designation                   string
+reference_epoch                        float64
+ra_deg                                 float64
+dec_deg                                float64
+galactic_longitude_deg                 float64
+galactic_latitude_deg                  float64
+parallax_mas                           float64 nullable
+parallax_error_mas                     float64 nullable
+parallax_over_error                    float64 nullable
+proper_motion_mas_per_year             float64 nullable
+proper_motion_ra_mas_per_year          float64 nullable
+proper_motion_ra_error_mas_per_year    float64 nullable
+proper_motion_dec_mas_per_year         float64 nullable
+proper_motion_dec_error_mas_per_year   float64 nullable
+radial_velocity_km_per_s               float64 nullable
+radial_velocity_error_km_per_s         float64 nullable
+phot_g_mean_magnitude                  float64 nullable
+phot_bp_mean_magnitude                 float64 nullable
+phot_rp_mean_magnitude                 float64 nullable
+bp_rp_color                            float64 nullable
+ruwe                                   float64 nullable
+duplicated_source                      bool
+astrometric_params_solved              int8
+visibility_periods_used                int16 nullable
+phot_variable_flag                     string nullable
+non_single_star                        int16 nullable
+temperature_gspphot_k                  float64 nullable
+distance_gspphot_pc                    float64 nullable
+distance_gspphot_lower_pc              float64 nullable
+distance_gspphot_upper_pc              float64 nullable
+distance_pc                            float64 nullable
+distance_lower_pc                      float64 nullable
+distance_upper_pc                      float64 nullable
+distance_method                        string
+distance_quality                       string
+source                                 string
 ```
 
 ### 6.3 Planetary system (`exoplanet_systems.parquet`)
@@ -496,7 +520,7 @@ Keep:
 - current public build;
 - previous public build;
 - current raw NASA snapshot;
-- successful Gaia host batches;
+- current raw Gaia host snapshot (`data/raw/gaia_hosts/current/`);
 - query manifests and checksums.
 
 Delete or archive:
