@@ -112,16 +112,19 @@ def test_gaia_distance_prefers_gspphot_then_inverse_parallax():
     assert actual[0]["distance_lower_pc"] == 20.0
     assert actual[0]["distance_upper_pc"] == 30.0
     assert actual[0]["distance_method"] == "gaia_gspphot"
+    assert actual[0]["distance_quality"] == "positive_gspphot_estimate"
 
     assert actual[1]["distance_pc"] == pytest.approx(100.0)
     assert actual[1]["distance_lower_pc"] == pytest.approx(1000.0 / 11.0)
     assert actual[1]["distance_upper_pc"] == pytest.approx(1000.0 / 9.0)
     assert actual[1]["distance_method"] == "inverse_parallax"
+    assert actual[1]["distance_quality"] == "snr_ge_5_ruwe_acceptable"
 
     assert actual[2]["distance_pc"] is None
     assert actual[2]["distance_lower_pc"] is None
     assert actual[2]["distance_upper_pc"] is None
     assert actual[2]["distance_method"] == "unavailable"
+    assert actual[2]["distance_quality"] == "unavailable"
 
 
 def test_inverse_parallax_accepts_missing_ruwe_but_rejects_threshold():

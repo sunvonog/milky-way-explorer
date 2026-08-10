@@ -135,7 +135,7 @@ def add_gaia_distance(frame: pl.DataFrame) -> pl.DataFrame:
             .then(pl.lit("positive_gspphot_estimate"))
             .when(has_qualified_parallax)
             .then(pl.lit("snr_ge_5_ruwe_acceptable"))
-            .otherwise(pl.lit("unavailabe"))
+            .otherwise(pl.lit("unavailable"))
         ),
     )
 
