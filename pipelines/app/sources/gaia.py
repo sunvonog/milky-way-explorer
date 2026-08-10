@@ -109,7 +109,9 @@ def download_gaia_host_batch(
     """Download one exact Gaia host batch using an asynchronous TAP job."""
     destination.parent.mkdir(parents=True, exist_ok=True)
     partial = destination.with_name(f".{destination.name}.part")
+    error_output = Path(f"{partial}.error")
     partial.unlink(missing_ok=True)
+    error_output.unlink(missing_ok=True)
 
     archive = client or _default_client()
 
@@ -120,7 +122,7 @@ def download_gaia_host_batch(
             output_format="csv",
             dump_to_file=True,
             background=False,
-            verbose=False,
+            verbose=True,
         )
 
         phase = job.get_phase()
@@ -135,8 +137,19 @@ def download_gaia_host_batch(
             )
 
         partial.replace(destination)
-    except BaseException:
+    except BaseException as exc:
+        if error_output.is_file():
+            try:
+                response = error_output.read_text(encoding="utf-8", errors="replace")
+            except OSError:
+                response = ""
+
+            response_excerpt = " ".join(response.split())[:2000]
+
+            if response_excerpt:
+                exc.add_note(f"Gaia TAP response: {response_excerpt}")
         partial.unlink(missing_ok=True)
+        error_output.unlink(missing_ok=True)
         raise
 
     return GaiaBatchDownload(

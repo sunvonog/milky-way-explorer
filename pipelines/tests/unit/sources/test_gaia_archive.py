@@ -27,9 +27,11 @@ class FakeGaiaClient:
         *,
         phase: str = "COMPLETED",
         write_output: bool = True,
+        submission_error: str | None = None,
     ):
         self.phase = phase
         self.write_output = write_output
+        self.submission_error = submission_error
         self.calls: list[dict[str, object]] = []
 
     def launch_job_async(
@@ -52,6 +54,10 @@ class FakeGaiaClient:
                 "verbose": verbose,
             }
         )
+
+        if self.submission_error is not None:
+            Path(f"{output_file}.error").write_text(self.submission_error, encoding="utf-8")
+            raise RuntimeError("500")
 
         if self.write_output:
             Path(output_file).write_text("source_id,designation\n7,Gaia DR3 7\n", encoding="utf-8")
@@ -140,7 +146,7 @@ def test_download_gaia_host_batch_uses_async_file_output(tmp_path: Path):
             "output_format": "csv",
             "dump_to_file": True,
             "background": False,
-            "verbose": False,
+            "verbose": True,
         }
     ]
 
@@ -173,3 +179,17 @@ def test_download_gaia_host_batch_rejects_missing_output(tmp_path: Path):
 
     assert not destination.exists()
     assert not partial.exists()
+
+
+def test_download_gaia_host_batch_reports_submission_response(tmp_path: Path):
+    batch = GaiaHostBatch(batch_number=1, source_ids=(7,))
+    destination = tmp_path / "gaia-host-0001.csv"
+    error_output = tmp_path / ".gaia-host-0001.csv.part.error"
+    client = FakeGaiaClient(submission_error="Gaia TAP service unavailable")
+
+    with pytest.raises(RuntimeError, match="500") as raised:
+        download_gaia_host_batch(batch, destination, client=client)
+
+    assert raised.value.__notes__ == ["Gaia TAP response: Gaia TAP service unavailable"]
+    assert not destination.exists()
+    assert not error_output.exists()
