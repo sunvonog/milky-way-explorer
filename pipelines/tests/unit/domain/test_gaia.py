@@ -4,10 +4,18 @@ from polars.testing import assert_frame_equal
 
 from app.config import REPO_ROOT
 from app.domain.exoplanets import build_hosts
-from app.domain.gaia import GaiaHostBatch, build_gaia_host_ids, plan_gaia_host_batches
+from app.domain.gaia import (
+    GaiaHostBatch,
+    add_gaia_distance,
+    build_gaia_host_ids,
+    build_gaia_host_sources,
+    plan_gaia_host_batches,
+)
+from app.loaders.gaia import load as load_gaia
 from app.loaders.pscomppars import load
 
 PSCOMPPARS_SNAPSHOT = REPO_ROOT / "data" / "raw" / "nasa_pscomppars" / "current" / "pscomppars.csv"
+GAIA_HOST_SNAPSHOT = REPO_ROOT / "data" / "raw" / "gaia_hosts" / "current"
 
 
 def test_gaia_host_ids_are_non_null_unique_and_sorted():
@@ -83,3 +91,66 @@ def test_current_snapshot_fits_into_nine_batches():
     flattened = [source_id for batch in batches for source_id in batch.source_ids]
 
     assert flattened == host_ids["gaia_source_id"].to_list()
+
+
+def test_gaia_distance_prefers_gspphot_then_inverse_parallax():
+    frame = pl.DataFrame(
+        {
+            "distance_gspphot_pc": [25.0, None, None],
+            "distance_gspphot_lower_pc": [20.0, None, None],
+            "distance_gspphot_upper_pc": [30.0, None, None],
+            "parallax_mas": [10.0, 10.0, 10.0],
+            "parallax_error_mas": [1.0, 1.0, 4.0],
+            "parallax_over_error": [10.0, 10.0, 2.5],
+            "ruwe": [1.0, 1.0, 1.0],
+        }
+    )
+
+    actual = add_gaia_distance(frame).to_dicts()
+
+    assert actual[0]["distance_pc"] == 25.0
+    assert actual[0]["distance_lower_pc"] == 20.0
+    assert actual[0]["distance_upper_pc"] == 30.0
+    assert actual[0]["distance_method"] == "gaia_gspphot"
+
+    assert actual[1]["distance_pc"] == pytest.approx(100.0)
+    assert actual[1]["distance_lower_pc"] == pytest.approx(1000.0 / 11.0)
+    assert actual[1]["distance_upper_pc"] == pytest.approx(1000.0 / 9.0)
+    assert actual[1]["distance_method"] == "inverse_parallax"
+
+    assert actual[2]["distance_pc"] is None
+    assert actual[2]["distance_lower_pc"] is None
+    assert actual[2]["distance_upper_pc"] is None
+    assert actual[2]["distance_method"] == "unavailable"
+
+
+def test_inverse_parallax_accepts_missing_ruwe_but_rejects_threshold():
+    frame = pl.DataFrame(
+        {
+            "distance_gspphot_pc": [None, None],
+            "distance_gspphot_lower_pc": [None, None],
+            "distance_gspphot_upper_pc": [None, None],
+            "parallax_mas": [10.0, 10.0],
+            "parallax_error_mas": [1.0, 1.0],
+            "parallax_over_error": [10.0, 10.0],
+            "ruwe": [None, 1.4],
+        }
+    )
+
+    actual = add_gaia_distance(frame)
+
+    assert actual["distance_method"].to_list() == ["inverse_parallax", "unavailable"]
+
+
+def test_build_gaia_host_sources_matches_current_snapshot():
+    staging = load_gaia(GAIA_HOST_SNAPSHOT)
+
+    sources = build_gaia_host_sources(staging)
+
+    method_counts = dict(sources.group_by("distance_method").len().iter_rows())
+
+    assert sources.height == 4396
+    assert sources["gaia_source_id"].n_unique() == 4396
+    assert sources["distance_pc"].null_count() == 109
+    assert method_counts == {"gaia_gspphot": 3887, "inverse_parallax": 400, "unavailable": 109}
+    assert "is_valid" not in sources.columns

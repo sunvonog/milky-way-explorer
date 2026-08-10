@@ -9,10 +9,12 @@ import polars as pl
 
 from app.config import get_settings
 from app.domain.gaia import GaiaHostBatch, build_gaia_host_ids, plan_gaia_host_batches
+from app.domain.gaia import build_gaia_host_sources as build_gaia_host_source_records
+from app.loaders import gaia as gaia_loader
 from app.runtime.checks import expect
 from app.runtime.flow import flow, task
 from app.sources.gaia import GaiaBatchDownload, download_gaia_host_batch
-from app.sources.snapshot import snapshot_directory
+from app.sources.snapshot import snapshot_dir, snapshot_directory
 
 EXOPLANET_HOSTS_FILENAME = "exoplanet_hosts.parquet"
 GAIA_HOST_IDS_FILENAME = "gaia_host_ids.parquet"
@@ -20,7 +22,11 @@ GAIA_HOST_SOURCE = "gaia_hosts"
 GAIA_HOST_ORIGIN = "Gaia DR3 async TAP"
 GAIA_HOST_BATCH_SIZE = 500
 GAIA_HOST_BATCHES_DIRECTORY = "batches"
+GAIA_HOST_SOURCES_FILENAME = "gaia_host_sources.parquet"
+
 EXPECTED_GAIA_HOST_IDS = 4396
+EXPECTED_GAIA_HOST_SOURCES = 4396
+EXPECTED_UNAVAILABLE_GAIA_DISTANCE = 109
 
 
 @task(name="resolve_exoplanet_hosts")
@@ -104,6 +110,56 @@ def build_gaia_host_manifest() -> Path:
 
     check_gaia_host_ids(host_ids)
     return write_gaia_host_ids(host_ids)
+
+
+@task(name="resolve_gaia_host_snapshot")
+def resolve_gaia_host_snapshot() -> Path:
+    path = snapshot_dir(get_settings().raw_root, GAIA_HOST_SOURCE)
+
+    if not path.is_dir():
+        raise FileNotFoundError(f"missing Gaia host snapshot: {path}")
+
+    return path
+
+
+@task(name="load_gaia_host_snapshot")
+def load_gaia_host_snapshot(path: Path) -> pl.DataFrame:
+    return gaia_loader.load(path)
+
+
+@task(name="build_gaia_host_sources")
+def build_gaia_host_source_table(staging: pl.DataFrame) -> pl.DataFrame:
+    return build_gaia_host_source_records(staging)
+
+
+@task(name="check_gaia_host_sources")
+def check_gaia_host_sources(sources: pl.DataFrame):
+    expect("gaia_host_sources", sources.height, EXPECTED_GAIA_HOST_SOURCES)
+
+    unavailable = sources.filter(pl.col("distance_method") == "unavailable").height
+
+    expect("gaia_host_sources_without_distance", unavailable, EXPECTED_UNAVAILABLE_GAIA_DISTANCE)
+
+
+@task(name="write_gaia_host_sources")
+def write_gaia_host_sources(sources: pl.DataFrame) -> Path:
+    output = get_settings().processed_root / GAIA_HOST_SOURCES_FILENAME
+
+    output.parent.mkdir(parents=True, exist_ok=True)
+    sources.write_parquet(output)
+
+    return output
+
+
+@flow(name="build-gaia-hosts")
+def build_gaia_hosts() -> Path:
+    """Publish exact Gaia source records from the committed snapshot."""
+    snapshot = resolve_gaia_host_snapshot()
+    staging = load_gaia_host_snapshot(snapshot)
+    sources = build_gaia_host_source_table(staging)
+
+    check_gaia_host_sources(sources)
+    return write_gaia_host_sources(sources)
 
 
 @flow(name="refresh-gaia-hosts")

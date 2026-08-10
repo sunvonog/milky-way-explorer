@@ -35,13 +35,18 @@ def test_canonical_build_runs_publication_flows_in_order(monkeypatch: pytest.Mon
         calls.append("gaia-host-manifest")
         return Path("gaia_host_ids.parquet")
 
+    def record_gaia_hosts() -> Path:
+        calls.append("gaia-hosts")
+        return Path("gaia_host_sources.parquet")
+
     monkeypatch.setattr(pipeline_main, "build_identity", record_identity)
     monkeypatch.setattr(pipeline_main, "build_exoplanets", record_exoplanets)
     monkeypatch.setattr(pipeline_main, "build_gaia_host_manifest", record_gaia_host_manifest)
+    monkeypatch.setattr(pipeline_main, "build_gaia_hosts", record_gaia_hosts)
 
     pipeline_main.canonical_build()
 
-    assert calls == ["identity", "exoplanets", "gaia-host-manifest"]
+    assert calls == ["identity", "exoplanets", "gaia-host-manifest", "gaia-hosts"]
 
 
 def test_main_runs_gaia_host_refresh(

@@ -15,7 +15,7 @@ import sys
 
 from app.config import override_settings
 from app.flows.exoplanets import build_exoplanets, refresh_pscomppars
-from app.flows.gaia import build_gaia_host_manifest, refresh_gaia_hosts
+from app.flows.gaia import build_gaia_host_manifest, build_gaia_hosts, refresh_gaia_hosts
 from app.flows.identity import build_identity
 from app.flows.snapshots import refresh_snapshots
 from app.runtime.flow import flow
@@ -27,6 +27,7 @@ def canonical_build() -> None:
     build_identity()
     build_exoplanets()
     build_gaia_host_manifest()
+    build_gaia_hosts()
     # future: gaia enrichment, density aggregation, publication
 
 

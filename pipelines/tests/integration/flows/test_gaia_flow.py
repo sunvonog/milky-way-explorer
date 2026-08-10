@@ -1,4 +1,5 @@
 import json
+import shutil
 from collections.abc import Iterator
 from pathlib import Path
 
@@ -18,6 +19,7 @@ from app.loaders.pscomppars import load
 from app.sources.gaia import GaiaBatchDownload
 
 PSCOMPPARS_SNAPSHOT = REPO_ROOT / "data" / "raw" / "nasa_pscomppars" / "current" / "pscomppars.csv"
+GAIA_HOST_SNAPSHOT = REPO_ROOT / "data" / "raw" / "gaia_hosts" / "current"
 
 
 @pytest.fixture
@@ -136,3 +138,27 @@ def test_refresh_gaia_hosts_preserves_current_snapshot_when_a_batch_fails(
 
     assert marker.read_text(encoding="utf-8") == "existing snapshot"
     assert list(current.iterdir()) == [marker]
+
+
+def test_build_gaia_hosts_publishes_source_table(data_root: Path):
+    snapshot = data_root / "raw" / "gaia_hosts" / "current"
+    shutil.copytree(GAIA_HOST_SNAPSHOT, snapshot)
+
+    path = gaia_flow.build_gaia_hosts()
+
+    assert path == (data_root / "processed" / "gaia_host_sources.parquet")
+    assert path.is_file()
+
+    sources = pl.read_parquet(path)
+
+    method_counts = dict(sources.group_by("distance_method").len().iter_rows())
+
+    assert sources.height == 4396
+    assert sources["gaia_source_id"].n_unique() == 4396
+    assert sources["distance_pc"].null_count() == 109
+    assert method_counts == {"gaia_gspphot": 3887, "inverse_parallax": 400, "unavailable": 109}
+
+
+def test_build_gaia_hosts_requires_committed_snapshot(data_root: Path):
+    with pytest.raises(FileNotFoundError, match="Gaia host snapshot"):
+        gaia_flow.build_gaia_hosts()
