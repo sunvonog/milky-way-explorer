@@ -241,10 +241,13 @@ source                       string
 Published by the canonical build from the committed multi-file snapshot at
 `data/raw/gaia_hosts/current/`. One row per exact Gaia DR3 source ID from the
 host-ID manifest. Distance fields are selected offline with explicit method and
-quality provenance. Heliocentric and Galactocentric coordinates are not yet
-computed.
+quality provenance. Heliocentric Cartesian coordinates (parsecs) and
+Galactocentric Cartesian coordinates (kiloparsecs, Astropy `v4.0` frame) are
+derived from the selected distance and Galactic sky position. Sources without an
+accepted distance leave all six spatial columns null.
 
-Current expectations: 4,396 rows; 109 with `distance_method = unavailable`.
+Current expectations: 4,396 rows; 109 with `distance_method = unavailable`
+(and matching null spatial coordinates).
 
 ```text
 gaia_source_id                         int64
@@ -283,6 +286,12 @@ distance_lower_pc                      float64 nullable
 distance_upper_pc                      float64 nullable
 distance_method                        string
 distance_quality                       string
+heliocentric_x_pc                      float64 nullable
+heliocentric_y_pc                      float64 nullable
+heliocentric_z_pc                      float64 nullable
+galactocentric_x_kpc                   float64 nullable
+galactocentric_y_kpc                   float64 nullable
+galactocentric_z_kpc                   float64 nullable
 source                                 string
 ```
 
@@ -402,6 +411,19 @@ distance_lower_pc
 distance_upper_pc
 ```
 
+Published `distance_quality` values for exact Gaia hosts:
+
+```text
+positive_gspphot_estimate
+    → GSP-Phot distance accepted
+
+snr_ge_5_ruwe_acceptable
+    → inverse-parallax distance accepted
+
+unavailable
+    → no accepted distance
+```
+
 ## 9. Coordinate policy
 
 ### Sky views
@@ -411,17 +433,21 @@ distance_upper_pc
 
 ### Earth-centred exoplanet view
 
-- heliocentric Cartesian coordinates;
-- units: parsecs.
+- heliocentric Cartesian coordinates from Galactic `(l, b)` and `distance_pc`;
+- units: parsecs;
+- Sun at the origin;
+- `x`/`y` in the Galactic plane, `z` height from the plane.
 
 ### Milky Way top-down view
 
-- Galactocentric Cartesian coordinates;
+- Galactocentric Cartesian coordinates via Astropy `SkyCoord` → `Galactocentric`;
 - units: kiloparsecs;
 - Galactic centre at origin;
+- frozen Astropy parameter set `v4.0` (Sun near `(-8.122, 0, 0.0208)` kpc);
 - Sun shown separately.
 
-The build manifest records the Astropy frame configuration.
+The build manifest records the Astropy frame configuration
+(`galactocentric_parameter_set = "v4.0"`).
 
 ## 10. Quality policy
 

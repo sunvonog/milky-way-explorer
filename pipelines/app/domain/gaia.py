@@ -166,7 +166,7 @@ def build_gaia_host_sources(staging: pl.DataFrame) -> pl.DataFrame:
 
 
 def add_heliocentric_coordinates(frame: pl.DataFrame) -> pl.DataFrame:
-    """Add sun-centred Galactic Cartesian coordinates in parsec."""
+    """Add sun-centred Galactic Cartesian coordinates in parsecs."""
     longitude_rad = pl.col("galactic_longitude_deg") * _DEGREES_TO_RADIANS
     latitude_rad = pl.col("galactic_latitude_deg") * _DEGREES_TO_RADIANS
     distance = pl.col("distance_pc")
@@ -188,7 +188,7 @@ def add_galactocentric_coordinates(frame: pl.DataFrame) -> pl.DataFrame:
     points approximately toward Galactic longitude 90 degrees, and
     positive z points approximately toward the north Galactic pole.
 
-    The transformation explicity uses Astropy's named ``v4.0``
+    The transformation explicitly uses Astropy's named ``v4.0``
     parameter set instead of the library's ambient default:
 
         - Galactic-centre ICRS coordinates come from Reid & Brunthaler

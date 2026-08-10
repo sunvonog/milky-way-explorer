@@ -214,11 +214,13 @@ The normal build consumes the committed snapshot and does not contact Gaia:
 data/raw/gaia_hosts/current/
     → combine and validate all batch CSVs
     → select distance with explicit method and quality
+    → derive heliocentric Cartesian coordinates (pc)
+    → derive Galactocentric Cartesian coordinates (kpc, Astropy v4.0)
     → gaia_host_sources.parquet
 ```
 
 Current expectations: 4,396 published sources, of which 109 have
-`distance_method = unavailable`.
+`distance_method = unavailable` and null heliocentric / Galactocentric columns.
 
 Fallback matching (external identifiers, coordinate matches) is not part of
 this flow. Hosts without an exact Gaia ID remain on the NASA host table until a
@@ -307,30 +309,44 @@ distance_method
 distance_quality
 ```
 
+`distance_quality` is one of `positive_gspphot_estimate`,
+`snr_ge_5_ruwe_acceptable`, or `unavailable`.
+
 No distance is fabricated for sources that do not meet an accepted method.
 
 ## 7. Coordinate transformation
 
+Exact Gaia host publish applies both transforms after distance selection.
+Missing `distance_pc` leaves the six spatial columns null.
+
 ### Heliocentric
 
-Used by the exoplanet atlas.
+Used by the exoplanet atlas. Computed offline from Galactic longitude,
+latitude, and `distance_pc`:
 
 ```text
 Sun = origin
-x, y = Galactic plane
-z = height from Galactic plane
+x = distance × cos(b) × cos(l)
+y = distance × cos(b) × sin(l)
+z = distance × sin(b)
+units = parsecs
 ```
 
 ### Galactocentric
 
-Used by the Milky Way top-down view.
+Used by the Milky Way top-down view. Astropy transforms Galactic
+`(l, b, distance)` into the named `v4.0` Galactocentric frame:
 
 ```text
 Galactic centre = origin
-Sun = explicit reference marker
+Sun ≈ (-8.122, 0, 0.0208) kpc
+units = kiloparsecs
+parameter set = v4.0
 ```
 
-Astropy performs the transformation. The selected Galactocentric parameter set is written to the dataset manifest.
+Freezing `v4.0` prevents ambient Astropy default changes from silently
+moving published positions. The selected parameter set is written to the
+dataset manifest.
 
 ## 8. Density aggregation
 
