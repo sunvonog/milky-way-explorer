@@ -5,8 +5,11 @@ from polars.testing import assert_frame_equal
 from app.config import REPO_ROOT
 from app.domain.exoplanets import build_hosts
 from app.domain.gaia import (
+    GALACTOCENTRIC_PARAMETER_SET,
     GaiaHostBatch,
     add_gaia_distance,
+    add_galactocentric_coordinates,
+    add_heliocentric_coordinates,
     build_gaia_host_ids,
     build_gaia_host_sources,
     plan_gaia_host_batches,
@@ -112,16 +115,19 @@ def test_gaia_distance_prefers_gspphot_then_inverse_parallax():
     assert actual[0]["distance_lower_pc"] == 20.0
     assert actual[0]["distance_upper_pc"] == 30.0
     assert actual[0]["distance_method"] == "gaia_gspphot"
+    assert actual[0]["distance_quality"] == "positive_gspphot_estimate"
 
     assert actual[1]["distance_pc"] == pytest.approx(100.0)
     assert actual[1]["distance_lower_pc"] == pytest.approx(1000.0 / 11.0)
     assert actual[1]["distance_upper_pc"] == pytest.approx(1000.0 / 9.0)
     assert actual[1]["distance_method"] == "inverse_parallax"
+    assert actual[1]["distance_quality"] == "snr_ge_5_ruwe_acceptable"
 
     assert actual[2]["distance_pc"] is None
     assert actual[2]["distance_lower_pc"] is None
     assert actual[2]["distance_upper_pc"] is None
     assert actual[2]["distance_method"] == "unavailable"
+    assert actual[2]["distance_quality"] == "unavailable"
 
 
 def test_inverse_parallax_accepts_missing_ruwe_but_rejects_threshold():
@@ -152,5 +158,92 @@ def test_build_gaia_host_sources_matches_current_snapshot():
     assert sources.height == 4396
     assert sources["gaia_source_id"].n_unique() == 4396
     assert sources["distance_pc"].null_count() == 109
+    assert sources["heliocentric_x_pc"].null_count() == 109
+    assert sources["heliocentric_y_pc"].null_count() == 109
+    assert sources["heliocentric_z_pc"].null_count() == 109
+    assert sources["galactocentric_x_kpc"].null_count() == 109
+    assert sources["galactocentric_y_kpc"].null_count() == 109
+    assert sources["galactocentric_z_kpc"].null_count() == 109
     assert method_counts == {"gaia_gspphot": 3887, "inverse_parallax": 400, "unavailable": 109}
     assert "is_valid" not in sources.columns
+
+
+def test_heliocentric_coordinates_use_sun_as_origin():
+    frame = pl.DataFrame(
+        {
+            "galactic_longitude_deg": [
+                0.0,
+                90.0,
+                0.0,
+                180.0,
+                0.0,
+            ],
+            "galactic_latitude_deg": [
+                0.0,
+                0.0,
+                90.0,
+                0.0,
+                0.0,
+            ],
+            "distance_pc": [10.0, 10.0, 10.0, 10.0, None],
+        }
+    )
+
+    rows = add_heliocentric_coordinates(frame).to_dicts()
+
+    assert rows[0]["heliocentric_x_pc"] == pytest.approx(10.0)
+    assert rows[0]["heliocentric_y_pc"] == pytest.approx(0.0, abs=1e-12)
+    assert rows[0]["heliocentric_z_pc"] == pytest.approx(0.0, abs=1e-12)
+
+    assert rows[1]["heliocentric_x_pc"] == pytest.approx(0.0, abs=1e-12)
+    assert rows[1]["heliocentric_y_pc"] == pytest.approx(10.0)
+    assert rows[1]["heliocentric_z_pc"] == pytest.approx(0.0, abs=1e-12)
+
+    assert rows[2]["heliocentric_x_pc"] == pytest.approx(0.0, abs=1e-12)
+    assert rows[2]["heliocentric_y_pc"] == pytest.approx(0.0, abs=1e-12)
+    assert rows[2]["heliocentric_z_pc"] == pytest.approx(10.0)
+
+    assert rows[3]["heliocentric_x_pc"] == pytest.approx(-10.0)
+    assert rows[3]["heliocentric_y_pc"] == pytest.approx(0.0, abs=1e-12)
+    assert rows[3]["heliocentric_z_pc"] == pytest.approx(0.0, abs=1e-12)
+
+    assert rows[4]["heliocentric_x_pc"] is None
+    assert rows[4]["heliocentric_y_pc"] is None
+    assert rows[4]["heliocentric_z_pc"] is None
+
+
+def test_galactocentric_coordinates_use_milky_way_center_as_origin():
+    frame = pl.DataFrame(
+        {
+            "galactic_longitude_deg": [
+                0.0,
+                0.0,
+                90.0,
+                0.0,
+            ],
+            "galactic_latitude_deg": [0.0, 0.0, 0.0, 0.0],
+            "distance_pc": [0.0, 8122.0, 1000.0, None],
+        }
+    )
+
+    rows = add_galactocentric_coordinates(frame).to_dicts()
+
+    assert GALACTOCENTRIC_PARAMETER_SET == "v4.0"
+
+    # Solar-system origin expressed in the Milky-Way-centered frame.
+    assert rows[0]["galactocentric_x_kpc"] == pytest.approx(-8.121973366, abs=1e-6)
+    assert rows[0]["galactocentric_y_kpc"] == pytest.approx(0.0, abs=1e-9)
+    assert rows[0]["galactocentric_z_kpc"] == pytest.approx(0.0208, abs=1e-6)
+
+    # Looking toward l=0º, b=0º at the adopted centre distance
+    # arrives approximately at the Milky Way centre.
+    assert rows[1]["galactocentric_x_kpc"] == pytest.approx(0.0, abs=2e-5)
+    assert rows[1]["galactocentric_y_kpc"] == pytest.approx(0.0, abs=2e-5)
+    assert rows[1]["galactocentric_z_kpc"] == pytest.approx(0.0, abs=2e-5)
+
+    # A one-kiloparsec displacement toward l=90º follows +y.
+    assert rows[2]["galactocentric_y_kpc"] == pytest.approx(1.0, abs=1e-6)
+
+    assert rows[3]["galactocentric_x_kpc"] is None
+    assert rows[3]["galactocentric_y_kpc"] is None
+    assert rows[3]["galactocentric_z_kpc"] is None

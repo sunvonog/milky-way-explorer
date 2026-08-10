@@ -3,8 +3,15 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from math import pi
 
+import astropy.units as u
 import polars as pl
+from astropy.coordinates import Galactocentric, SkyCoord, galactocentric_frame_defaults
+
+_DEGREES_TO_RADIANS = pi / 180.0
+
+GALACTOCENTRIC_PARAMETER_SET = "v4.0"
 
 GAIA_HOST_SOURCE_COLUMNS = (
     "gaia_source_id",
@@ -43,6 +50,12 @@ GAIA_HOST_SOURCE_COLUMNS = (
     "distance_upper_pc",
     "distance_method",
     "distance_quality",
+    "heliocentric_x_pc",
+    "heliocentric_y_pc",
+    "heliocentric_z_pc",
+    "galactocentric_x_kpc",
+    "galactocentric_y_kpc",
+    "galactocentric_z_kpc",
     "source",
 )
 
@@ -135,7 +148,7 @@ def add_gaia_distance(frame: pl.DataFrame) -> pl.DataFrame:
             .then(pl.lit("positive_gspphot_estimate"))
             .when(has_qualified_parallax)
             .then(pl.lit("snr_ge_5_ruwe_acceptable"))
-            .otherwise(pl.lit("unavailabe"))
+            .otherwise(pl.lit("unavailable"))
         ),
     )
 
@@ -145,6 +158,87 @@ def build_gaia_host_sources(staging: pl.DataFrame) -> pl.DataFrame:
     return (
         staging.filter(pl.col("is_valid"))
         .pipe(add_gaia_distance)
+        .pipe(add_heliocentric_coordinates)
+        .pipe(add_galactocentric_coordinates)
         .select(*GAIA_HOST_SOURCE_COLUMNS)
         .sort("gaia_source_id")
+    )
+
+
+def add_heliocentric_coordinates(frame: pl.DataFrame) -> pl.DataFrame:
+    """Add sun-centred Galactic Cartesian coordinates in parsecs."""
+    longitude_rad = pl.col("galactic_longitude_deg") * _DEGREES_TO_RADIANS
+    latitude_rad = pl.col("galactic_latitude_deg") * _DEGREES_TO_RADIANS
+    distance = pl.col("distance_pc")
+
+    return frame.with_columns(
+        heliocentric_x_pc=(distance * latitude_rad.cos() * longitude_rad.cos()),
+        heliocentric_y_pc=(distance * latitude_rad.cos() * longitude_rad.sin()),
+        heliocentric_z_pc=(distance * latitude_rad.sin()),
+    )
+
+
+def add_galactocentric_coordinates(frame: pl.DataFrame) -> pl.DataFrame:
+    """Add Milky-Way-centred Cartesian positions in kiloparsecs.
+
+    The origin is the centre of the Milky Way. Astropy's right-handed
+    Galactocentric convention places the sun near
+    ``(-8.122, 0, 0.0208)`` kpc. The positive x-axis points from the
+    Sun's projected position toward the Galactic centre, positive y
+    points approximately toward Galactic longitude 90 degrees, and
+    positive z points approximately toward the north Galactic pole.
+
+    The transformation explicitly uses Astropy's named ``v4.0``
+    parameter set instead of the library's ambient default:
+
+        - Galactic-centre ICRS coordinates come from Reid & Brunthaler
+              (2004): https://ui.adsabs.harvard.edu/abs/2004ApJ...616..872R
+        - Sun–Galactic-centre distance, 8.122 kpc, comes from the GRAVITY
+            Collaboration (2018):
+            https://ui.adsabs.harvard.edu/abs/2018A%26A...615L..15G
+        - Solar height, 20.8 pc, comes from Bennett & Bovy (2019):
+            https://ui.adsabs.harvard.edu/abs/2019MNRAS.482.1417B
+
+    Astropy exposes these references through
+    ``galactocentric_frame_defaults.get_from_registry("v4.0")``.
+    Freezing the named set prevents library-default changes from
+    silently moving published positions.
+    """
+    indexed = frame.with_row_index("_coordinate_row")
+
+    valid = indexed.filter(
+        pl.all_horizontal(
+            pl.col("galactic_longitude_deg", "galactic_latitude_deg", "distance_pc").is_not_null()
+        )
+    )
+
+    if valid.is_empty():
+        return frame.with_columns(
+            pl.lit(None, dtype=pl.Float64).alias("galactocentric_x_kpc"),
+            pl.lit(None, dtype=pl.Float64).alias("galactocentric_y_kpc"),
+            pl.lit(None, dtype=pl.Float64).alias("galactocentric_z_kpc"),
+        )
+
+    coordinates = SkyCoord(
+        l=valid["galactic_longitude_deg"].to_numpy() * u.deg,
+        b=valid["galactic_latitude_deg"].to_numpy() * u.deg,
+        distance=valid["distance_pc"].to_numpy() * u.pc,
+        frame="galactic",
+    )
+
+    with galactocentric_frame_defaults.set(GALACTOCENTRIC_PARAMETER_SET):
+        transformed = coordinates.transform_to(Galactocentric())
+
+    cartesian = transformed.cartesian
+
+    positions = valid.select("_coordinate_row").with_columns(
+        pl.Series("galactocentric_x_kpc", cartesian.x.to_value(u.kpc)),
+        pl.Series("galactocentric_y_kpc", cartesian.y.to_value(u.kpc)),
+        pl.Series("galactocentric_z_kpc", cartesian.z.to_value(u.kpc)),
+    )
+
+    return (
+        indexed.join(positions, on="_coordinate_row", how="left")
+        .sort("_coordinate_row")
+        .drop("_coordinate_row")
     )

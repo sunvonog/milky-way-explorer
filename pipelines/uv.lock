@@ -500,6 +500,7 @@ name = "pipelines"
 version = "0.1.0"
 source = { virtual = "." }
 dependencies = [
+    { name = "astropy" },
     { name = "astroquery" },
     { name = "logly" },
     { name = "polars" },
@@ -516,6 +517,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
+    { name = "astropy", specifier = ">=8.0.1,<9" },
     { name = "astroquery", specifier = ">=0.4.11,<0.5" },
     { name = "logly", specifier = ">=0.2.1,<0.3" },
     { name = "polars", specifier = ">=1.43.0" },

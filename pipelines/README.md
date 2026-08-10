@@ -114,9 +114,9 @@ All paths are under `data/processed/`.
 
 | File | Contents |
 |---|---|
-| `gaia_host_sources.parquet` | One validated Gaia DR3 source per host-ID manifest entry, with distance provenance |
+| `gaia_host_sources.parquet` | One validated Gaia DR3 source per host-ID manifest entry, with distance provenance plus heliocentric (pc) and Galactocentric (kpc, Astropy `v4.0`) coordinates |
 
-Current expectations: 4,396 sources; 109 without an accepted distance.
+Current expectations: 4,396 sources; 109 without an accepted distance (null spatial coordinates).
 
 ## Adding a flow
 

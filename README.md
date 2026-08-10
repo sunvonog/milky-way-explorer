@@ -162,7 +162,7 @@ milky-way-explorer/
 
 - Query Gaia only for the extracted host IDs.
 - Enrich hosts with Gaia astrometry and photometry.
-- Generate heliocentric and Galactocentric coordinates.
+- Generate heliocentric and Galactocentric coordinates (implemented on `gaia_host_sources`).
 - Store match method and confidence.
 
 ### Phase 4 — Milky Way background

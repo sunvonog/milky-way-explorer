@@ -168,11 +168,12 @@ Implemented responsibilities:
 - publish a failure-safe committed multi-file snapshot;
 - combine and validate all batches;
 - retain distance provenance;
+- calculate heliocentric Cartesian positions (parsecs);
+- calculate Galactocentric Cartesian positions (kiloparsecs, Astropy `v4.0`);
 - publish `gaia_host_sources.parquet`.
 
 Future responsibilities:
 
-- calculate heliocentric and Galactocentric positions;
 - create compact render records;
 - add reviewed fallback matching where an exact Gaia ID is unavailable.
 
@@ -279,13 +280,18 @@ The background and host layers can be updated independently.
 
 ### 7.2 Heliocentric top-down
 
-The Sun is the origin. This is useful for the exoplanet atlas.
+The Sun is the origin. Exact host sources store `heliocentric_{x,y,z}_pc`
+derived from Galactic `(l, b)` and the selected distance. This is useful for
+the exoplanet atlas.
 
 ### 7.3 Galactocentric top-down
 
-The Galactic centre is the origin. This is the main Milky Way overview.
+The Galactic centre is the origin. Exact host sources store
+`galactocentric_{x,y,z}_kpc` via Astropy's named `v4.0` Galactocentric
+parameter set. This is the main Milky Way overview.
 
-The pipeline must explicitly record the Astropy Galactocentric parameter set used so library upgrades do not silently change positions.
+The pipeline must explicitly freeze and record that parameter set so library
+upgrades do not silently change positions.
 
 ## 8. Name architecture
 
