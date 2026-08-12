@@ -7,6 +7,11 @@ from pathlib import Path
 
 import polars as pl
 
+from app.artifacts import (
+    EXOPLANET_HOSTS_FILENAME,
+    EXOPLANET_SYSTEMS_FILENAME,
+    EXOPLANETS_FILENAME,
+)
 from app.config import get_settings
 from app.domain.exoplanets import (
     build_hosts,
@@ -25,10 +30,11 @@ from app.sources.snapshot import snapshot_dir, snapshot_url
 
 SOURCE = "nasa_pscomppars"
 SNAPSHOT_FILENAME = "pscomppars.csv"
+
 OUTPUT_FILENAMES = {
-    "planets": "exoplanets.parquet",
-    "hosts": "exoplanet_hosts.parquet",
-    "systems": "exoplanet_systems.parquet",
+    "planets": EXOPLANETS_FILENAME,
+    "hosts": EXOPLANET_HOSTS_FILENAME,
+    "systems": EXOPLANET_SYSTEMS_FILENAME,
     "invalid_rows": "review_invalid_exoplanet_rows.parquet",
     "stellar_conflicts": "review_host_stellar_conflicts.parquet",
     "system_count_mismatches": "review_system_planet_count_mismatches.parquet",
