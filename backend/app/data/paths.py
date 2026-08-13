@@ -7,6 +7,7 @@ from pathlib import Path
 STARS_FILE = "stars.parquet"
 ALIAS_FILE = "alias.parquet"
 HOST_LINKS_FILE = "exoplanet_host_links.parquet"
+HOST_VISUALIZATION_FILE = "exoplanet_hosts.arrow"
 
 
 class BuildNotPublishedError(FileNotFoundError):

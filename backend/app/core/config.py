@@ -17,6 +17,10 @@ class Settings(BaseSettings):
         return self.data_root / "processed"
 
     @property
+    def frontend_root(self) -> Path:
+        return self.data_root / "frontend"
+
+    @property
     def builds_root(self) -> Path:
         return self.data_root / "builds"
 

@@ -1,3 +1,4 @@
+from collections.abc import Iterator
 from pathlib import Path
 
 import polars as pl
@@ -10,7 +11,7 @@ from app.main import app
 
 
 @pytest.fixture
-def client(tmp_path: Path):
+def client(tmp_path: Path) -> Iterator[TestClient]:
     def override() -> Settings:
         return Settings(data_root=tmp_path)
 

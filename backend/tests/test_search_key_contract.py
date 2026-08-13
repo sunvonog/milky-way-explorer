@@ -12,5 +12,5 @@ from app.core.names import search_key
         ("BATSŨ̀", "Batsu"),
     ],
 )
-def test_search_key_folds_equivalent_forms(a, b):
+def test_search_key_folds_equivalent_forms(a: str, b: str) -> None:
     assert search_key(a) == search_key(b)
