@@ -1,5 +1,7 @@
 import { tableFromIPC } from 'apache-arrow'
 
+const HOST_VISUALIZATION_FILENAME = 'exoplanet_hosts.arrow'
+
 export type PositionStatus = 'available' | 'no_accepted_distance' | 'no_exact_gaia_source'
 
 export type DistanceMethod = 'gaia_gspphot' | 'inverse_parallax' | 'unavailable'
@@ -211,4 +213,22 @@ export function decodeHostVisualization(data: Uint8Array): HostVisualizationReco
       bpRpColor: nullableNumber(row, 'bp_rp_color'),
     }
   })
+}
+
+export async function loadHostVisualization(
+  baseUrl: string,
+  fetcher: typeof fetch = fetch,
+): Promise<HostVisualizationRecord[]> {
+  const normalizedBaseURL = baseUrl.replace(/\/+$/, '')
+  const url = `${normalizedBaseURL}/${HOST_VISUALIZATION_FILENAME}`
+
+  const response = await fetcher(url)
+
+  if (!response.ok) {
+    throw new Error(`failed to load host visualization: ${response.status} ${response.statusText}`)
+  }
+
+  const data = new Uint8Array(await response.arrayBuffer())
+
+  return decodeHostVisualization(data)
 }

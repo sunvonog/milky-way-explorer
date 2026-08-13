@@ -1,7 +1,7 @@
 import { tableFromArrays, tableToIPC } from 'apache-arrow'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 
-import { decodeHostVisualization } from './hostVisualization'
+import { decodeHostVisualization, loadHostVisualization } from './hostVisualization'
 
 function visualizationArrowFixture(): Uint8Array {
   const table = tableFromArrays({
@@ -72,5 +72,44 @@ describe('decodeHostVisualization', () => {
       heliocentricPc: null,
       galactocentricKpc: null,
     })
+  })
+})
+
+function responseBody(data: Uint8Array): ArrayBuffer {
+  const buffer = new ArrayBuffer(data.byteLength)
+  new Uint8Array(buffer).set(data)
+  return buffer
+}
+
+describe('loadHostVisualization', () => {
+  it.each(['https://example.test/data', 'https://example.test/data/'])(
+    'loads and decodes the Arrow artifact from %s',
+    async (baseUrl) => {
+      const fetcher = vi.fn<typeof fetch>().mockResolvedValue(
+        new Response(responseBody(visualizationArrowFixture()), {
+          status: 200,
+        }),
+      )
+
+      const records = await loadHostVisualization(baseUrl, fetcher)
+
+      expect(fetcher).toHaveBeenCalledOnce()
+      expect(fetcher).toHaveBeenCalledWith('https://example.test/data/exoplanet_hosts.arrow')
+      expect(records).toHaveLength(2)
+      expect(records[0]?.hostName).toBe('Alpha')
+    },
+  )
+
+  it('reports an HTTP failure before decoding', async () => {
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValue(
+      new Response(null, {
+        status: 503,
+        statusText: 'Service Unavailable',
+      }),
+    )
+
+    await expect(loadHostVisualization('https://example.test/data', fetcher)).rejects.toThrow(
+      'failed to load host visualization: 503 Service Unavailable',
+    )
   })
 })
