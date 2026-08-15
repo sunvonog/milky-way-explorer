@@ -22,7 +22,6 @@
   "dependencies": {
     "apache-arrow": "^21.2.0",
     "d3": "^7.9.0",
-    "deck.gl": "^9.3.7",
     "motion-v": "^2.3.0",
     "pinia": "^4.0.2",
     "vue": "^3.5.40",
