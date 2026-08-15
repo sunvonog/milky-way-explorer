@@ -1,0 +1,113 @@
+import { mount } from '@vue/test-utils'
+import { describe, expect, it } from 'vitest'
+
+import type { HostVisualizationRecord } from '@/data/hostVisualization'
+import HostScatterPlot from './HostScatterPlot.vue'
+
+function host(overrides: Partial<HostVisualizationRecord>): HostVisualizationRecord {
+  return {
+    hostId: 'nea:host:default',
+    hostName: 'Default',
+    gaiaSourceId: '101',
+    planetCount: 1,
+    archivePlanetCount: 1,
+    planetCountMatchesArchive: true,
+    isCircumbinary: false,
+    positionStatus: 'available',
+    distancePc: 10,
+    distanceMethod: 'gaia_gspphot',
+    distanceQuality: 'positive_gspphot_estimate',
+    heliocentricPc: { x: 10, y: 0, z: 0 },
+    galactocentricKpc: { x: -8.112, y: 0, z: 0.0208 },
+    photGMeanMagnitude: 7.2,
+    bpRpColor: 0.8,
+    ...overrides,
+  }
+}
+
+const records: HostVisualizationRecord[] = [
+  host({
+    hostId: 'nea:host:alpha',
+    hostName: 'Alpha',
+    planetCount: 1,
+    heliocentricPc: { x: 10, y: 0, z: 0 },
+  }),
+  host({
+    hostId: 'nea:host:beta',
+    hostName: 'Beta',
+    gaiaSourceId: null,
+    positionStatus: 'no_exact_gaia_source',
+    distancePc: null,
+    distanceMethod: null,
+    distanceQuality: null,
+    heliocentricPc: null,
+    galactocentricKpc: null,
+    photGMeanMagnitude: null,
+    bpRpColor: null,
+  }),
+  host({
+    hostId: 'nea:host:gamma',
+    hostName: 'Gamma',
+    planetCount: 4,
+    distanceMethod: 'inverse_parallax',
+    distanceQuality: 'snr_ge_5_ruwe_acceptable',
+    heliocentricPc: { x: 0, y: 10, z: 0 },
+  }),
+]
+
+describe('HostScatterPlot', () => {
+  it('renders only hosts with heliocentric positions', () => {
+    const wrapper = mount(HostScatterPlot, {
+      props: { records },
+    })
+
+    const points = wrapper.findAll('[data-host-point]')
+
+    expect(points).toHaveLength(2)
+    expect(points.map((point) => point.attributes('data-host-id'))).toEqual([
+      'nea:host:alpha',
+      'nea:host:gamma',
+    ])
+
+    expect(wrapper.text()).toContain('2 of 3 hosts positioned')
+  })
+
+  it('marks the Sun and labels both axes in parsecs', () => {
+    const wrapper = mount(HostScatterPlot, {
+      props: { records },
+    })
+
+    expect(wrapper.find('[data-sun-origin]').exists()).toBe(true)
+    expect(wrapper.get('[data-axis-title="x"]').text()).toBe('Heliocentric x (pc)')
+    expect(wrapper.get('[data-axis-title="y"]').text()).toBe('Heliocentric y (pc)')
+  })
+
+  it('uses an equal physical scale for both coordinate axes', () => {
+    const wrapper = mount(HostScatterPlot, {
+      props: { records },
+    })
+
+    const sun = wrapper.get('[data-sun-origin]')
+    const alpha = wrapper.get('[data-host-id="nea:host:alpha"]')
+    const gamma = wrapper.get('[data-host-id="nea:host:gamma"]')
+
+    const sunX = Number(sun.attributes('cx'))
+    const sunY = Number(sun.attributes('cy'))
+
+    const alphaDistance = Math.abs(Number(alpha.attributes('cx')) - sunX)
+    const gammaDistance = Math.abs(Number(gamma.attributes('cy')) - sunY)
+
+    expect(alphaDistance).toBeCloseTo(gammaDistance, 8)
+  })
+
+  it('uses planet count for point size', () => {
+    const wrapper = mount(HostScatterPlot, {
+      props: { records },
+    })
+
+    const alphaRadius = Number(wrapper.get('[data-host-id="nea:host:alpha"]').attributes('r'))
+    const gammaRadius = Number(wrapper.get('[data-host-id="nea:host:gamma"]').attributes('r'))
+
+    expect(gammaRadius).toBeGreaterThan(alphaRadius)
+  })
+})
