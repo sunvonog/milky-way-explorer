@@ -83,21 +83,27 @@ const plot = computed(() => {
 
 const formatTick = format('~s')
 
+const hostPointClass = 'stroke-slate-50 opacity-75 [stroke-width:0.6]'
+
 function pointClass(record: PositionedHost): string {
-  return record.distanceMethod === 'inverse_parallax'
-    ? 'host-point host-point--inverse-parallax'
-    : 'host-point host-point--gspphot'
+  const distanceClass =
+    record.distanceMethod === 'inverse_parallax' ? 'fill-amber-400' : 'fill-blue-400'
+
+  return `${hostPointClass} ${distanceClass}`
 }
 </script>
 
 <template>
-  <figure class="host-scatter">
-    <figcaption>
-      <strong>Heliocentric exoplanet hosts</strong>
-      <span> {{ positionedRecords.length }} of {{ records.length }} hosts positioned </span>
+  <figure class="m-0 grid gap-3 text-slate-100">
+    <figcaption class="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2">
+      <strong class="text-lg font-semibold">Heliocentric exoplanet hosts</strong>
+      <span class="text-sm text-slate-400">
+        {{ positionedRecords.length }} of {{ records.length }} hosts positioned
+      </span>
     </figcaption>
 
     <svg
+      class="block h-auto w-full rounded-xl bg-slate-950"
       :viewBox="`0 0 ${width} ${height}`"
       role="img"
       aria-labelledby="host-scatter-title host-scatter-description"
@@ -109,7 +115,7 @@ function pointClass(record: PositionedHost): string {
       </desc>
 
       <rect
-        class="plot-frame"
+        class="fill-slate-900 stroke-slate-500 stroke-1"
         :x="margin.left"
         :y="margin.top"
         :width="plotWidth"
@@ -118,14 +124,14 @@ function pointClass(record: PositionedHost): string {
 
       <g v-for="tick in plot.xTicks" :key="`x-${tick}`">
         <line
-          class="grid-line"
+          class="stroke-slate-800 stroke-1"
           :x1="plot.xScale(tick)"
           :x2="plot.xScale(tick)"
           :y1="margin.top"
           :y2="height - margin.bottom"
         />
         <text
-          class="tick-label"
+          class="fill-slate-300 text-xs"
           text-anchor="middle"
           :x="plot.xScale(tick)"
           :y="height - margin.bottom + 22"
@@ -136,14 +142,14 @@ function pointClass(record: PositionedHost): string {
 
       <g v-for="tick in plot.yTicks" :key="`y-${tick}`">
         <line
-          class="grid-line"
+          class="stroke-slate-800 stroke-1"
           :x1="margin.left"
           :x2="width - margin.right"
           :y1="plot.yScale(tick)"
           :y2="plot.yScale(tick)"
         />
         <text
-          class="tick-label"
+          class="fill-slate-300 text-xs"
           text-anchor="end"
           dominant-baseline="middle"
           :x="margin.left - 10"
@@ -154,14 +160,14 @@ function pointClass(record: PositionedHost): string {
       </g>
 
       <line
-        class="origin-axis"
+        class="stroke-slate-500 stroke-[1.25]"
         :x1="plot.xScale(0)"
         :x2="plot.xScale(0)"
         :y1="margin.top"
         :y2="height - margin.bottom"
       />
       <line
-        class="origin-axis"
+        class="stroke-slate-500 stroke-[1.25]"
         :x1="margin.left"
         :x2="width - margin.right"
         :y1="plot.yScale(0)"
@@ -185,13 +191,19 @@ function pointClass(record: PositionedHost): string {
         </title>
       </circle>
 
-      <circle data-sun-origin class="sun-origin" :cx="plot.xScale(0)" :cy="plot.yScale(0)" r="5">
+      <circle
+        data-sun-origin
+        class="fill-yellow-300 stroke-yellow-100 stroke2"
+        :cx="plot.xScale(0)"
+        :cy="plot.yScale(0)"
+        r="5"
+      >
         <title>Sun — heliocentric origin</title>
       </circle>
 
       <text
         data-axis-title="x"
-        class="axis-title"
+        class="fill-slate-300 text-sm font-semibold"
         text-anchor="middle"
         :x="margin.left + plotWidth / 2"
         :y="height - 14"
@@ -201,7 +213,7 @@ function pointClass(record: PositionedHost): string {
 
       <text
         data-axis-title="y"
-        class="axis-title"
+        class="fill-slate-300 text-sm font-semibold"
         text-anchor="middle"
         :transform="`
           translate(18 ${margin.top + plotHeight / 2})
@@ -213,83 +225,3 @@ function pointClass(record: PositionedHost): string {
     </svg>
   </figure>
 </template>
-
-<style scoped>
-.host-scatter {
-  display: grid;
-  gap: 0.75rem;
-  margin: 0;
-  color: #e8edf7;
-}
-
-figcaption {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 0.5rem 1rem;
-}
-
-figcaption strong {
-  font-size: 1.1rem;
-}
-
-figcaption span {
-  color: #a8b3c7;
-  font-size: 0.9rem;
-}
-
-svg {
-  display: block;
-  width: 100%;
-  height: auto;
-  background: #080c16;
-}
-
-.plot-frame {
-  fill: #0c1322;
-  stroke: #566176;
-  stroke-width: 1;
-}
-
-.grid-line {
-  stroke: #293246;
-  stroke-width: 1;
-}
-
-.origin-axis {
-  stroke: #65738d;
-  stroke-width: 1.25;
-}
-
-.tick-label,
-.axis-title {
-  fill: #c9d2e3;
-  font-size: 12px;
-}
-
-.axis-title {
-  font-size: 13px;
-  font-weight: 600;
-}
-
-.host-point {
-  stroke: #f5f8ff;
-  stroke-width: 0.6;
-  opacity: 0.72;
-}
-
-.host-point--gspphot {
-  fill: #69a7ff;
-}
-
-.host-point--inverse-parallax {
-  fill: #ffb454;
-}
-
-.sun-origin {
-  fill: #ffe36e;
-  stroke: #fff8cc;
-  stroke-width: 2;
-}
-</style>
