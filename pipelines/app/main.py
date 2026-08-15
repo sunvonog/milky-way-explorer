@@ -18,6 +18,7 @@ from app.flows.exoplanets import build_exoplanets, refresh_pscomppars
 from app.flows.gaia import build_gaia_host_manifest, build_gaia_hosts, refresh_gaia_hosts
 from app.flows.identity import build_identity
 from app.flows.snapshots import refresh_snapshots
+from app.flows.visualization import build_host_visualization
 from app.runtime.flow import flow
 
 
@@ -28,6 +29,7 @@ def canonical_build() -> None:
     build_exoplanets()
     build_gaia_host_manifest()
     build_gaia_hosts()
+    build_host_visualization()
     # future: gaia enrichment, density aggregation, publication
 
 

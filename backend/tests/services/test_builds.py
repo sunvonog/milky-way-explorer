@@ -1,13 +1,14 @@
 import json
+from pathlib import Path
 
 from app.services.builds import BuildInfo, read_current_build
 
 
-def test_read_current_build_missing(tmp_path):
+def test_read_current_build_missing(tmp_path: Path) -> None:
     assert read_current_build(tmp_path / "builds" / "current.json") is None
 
 
-def test_read_current_build_valid(tmp_path):
+def test_read_current_build_valid(tmp_path: Path) -> None:
     pointer = tmp_path / "builds" / "current.json"
     pointer.parent.mkdir(parents=True)
     manifest = {

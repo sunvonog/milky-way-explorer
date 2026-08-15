@@ -7,6 +7,11 @@ from tempfile import TemporaryDirectory
 
 import polars as pl
 
+from app.artifacts import (
+    EXOPLANET_HOSTS_FILENAME,
+    GAIA_HOST_IDS_FILENAME,
+    GAIA_HOST_SOURCES_FILENAME,
+)
 from app.config import get_settings
 from app.domain.gaia import GaiaHostBatch, build_gaia_host_ids, plan_gaia_host_batches
 from app.domain.gaia import build_gaia_host_sources as build_gaia_host_source_records
@@ -16,13 +21,10 @@ from app.runtime.flow import flow, task
 from app.sources.gaia import GaiaBatchDownload, download_gaia_host_batch
 from app.sources.snapshot import snapshot_dir, snapshot_directory
 
-EXOPLANET_HOSTS_FILENAME = "exoplanet_hosts.parquet"
-GAIA_HOST_IDS_FILENAME = "gaia_host_ids.parquet"
 GAIA_HOST_SOURCE = "gaia_hosts"
 GAIA_HOST_ORIGIN = "Gaia DR3 async TAP"
 GAIA_HOST_BATCH_SIZE = 500
 GAIA_HOST_BATCHES_DIRECTORY = "batches"
-GAIA_HOST_SOURCES_FILENAME = "gaia_host_sources.parquet"
 
 EXPECTED_GAIA_HOST_IDS = 4396
 EXPECTED_GAIA_HOST_SOURCES = 4396

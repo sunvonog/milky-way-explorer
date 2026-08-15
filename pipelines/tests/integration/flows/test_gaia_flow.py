@@ -7,12 +7,15 @@ import polars as pl
 import pytest
 
 import app.flows.gaia as gaia_flow
+from app.artifacts import (
+    EXOPLANET_HOSTS_FILENAME,
+    GAIA_HOST_IDS_FILENAME,
+    GAIA_HOST_SOURCES_FILENAME,
+)
 from app.config import REPO_ROOT, override_settings, reset_settings
 from app.domain.exoplanets import build_hosts
 from app.domain.gaia import GaiaHostBatch
 from app.flows.gaia import (
-    EXOPLANET_HOSTS_FILENAME,
-    GAIA_HOST_IDS_FILENAME,
     build_gaia_host_manifest,
 )
 from app.loaders.pscomppars import load
@@ -146,7 +149,7 @@ def test_build_gaia_hosts_publishes_source_table(data_root: Path):
 
     path = gaia_flow.build_gaia_hosts()
 
-    assert path == (data_root / "processed" / "gaia_host_sources.parquet")
+    assert path == (data_root / "processed" / GAIA_HOST_SOURCES_FILENAME)
     assert path.is_file()
 
     sources = pl.read_parquet(path)
