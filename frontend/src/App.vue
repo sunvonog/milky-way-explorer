@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 
-import HostScatterPlot from '@/components/HostScatterPlot.vue'
 import { loadHostVisualization, type HostVisualizationRecord } from '@/data/hostVisualization'
+import HostScatterPlot from '@/components/HostScatterPlot.vue'
 
 const records = ref<HostVisualizationRecord[]>([])
 const isLoading = ref(true)
@@ -21,12 +21,16 @@ onMounted(async () => {
 </script>
 
 <template>
-  <main>
-    <h1>Milky Way Explorer</h1>
+  <main class="mx-auto min-h-screen w-full max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
+    <h1 class="mb-6 text-2xl fontfont-semibold tracking-tight sm:text-4xl">Milky Way Explorer</h1>
 
-    <p v-if="isLoading">Loading exoplanet hosts...</p>
+    <p v-if="isLoading" class="text-sm text-slate-400">Loading exoplanet hosts...</p>
 
-    <p v-else-if="errorMessage" role="alert">
+    <p
+      v-if="errorMessage"
+      class="rounded-lg border border-red-500/30 bg-red-950/40 px-4 py-3 text-red-200"
+      role="alert"
+    >
       {{ errorMessage }}
     </p>
 
