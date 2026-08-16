@@ -75,7 +75,7 @@ const coordinateFrames: Record<CoordinateFrame, CoordinateFramePresentation> = {
 const coordinateFrameOptions: readonly CoordinateFrame[] = ['heliocentric', 'galactocentric']
 
 const plot = computed(() => {
-  // Include the Sun so the origin always remains visible.
+  // Include the selected coordinate system's origin
   const xValues = [0, ...positionedRecords.value.map(({ position }) => position.x)]
   const yValues = [0, ...positionedRecords.value.map(({ position }) => position.y)]
 

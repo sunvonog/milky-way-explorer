@@ -160,4 +160,37 @@ describe('HostScatterPlot', () => {
 
     expect(galactocentricAlphaX).toBeLessThan(galactocentricOriginX)
   })
+
+  it('renders only hosts positioned in the selected frame', async () => {
+    const frameSpecificRecords: HostVisualizationRecord[] = [
+      host({
+        hostId: 'nea:host:heliocentric-only',
+        hostName: 'Heliocentric only',
+        heliocentricPc: { x: 10, y: 2, z: 1 },
+        galactocentricKpc: null,
+      }),
+      host({
+        hostId: 'nea:host:galactocentric-only',
+        hostName: 'Galactocentric only',
+        heliocentricPc: null,
+        galactocentricKpc: { x: -8, y: 0.5, z: 0.02 },
+      }),
+    ]
+
+    const wrapper = mount(HostScatterPlot, {
+      props: { records: frameSpecificRecords },
+    })
+
+    expect(
+      wrapper.findAll('[data-host-point]').map((point) => point.attributes('data-host-id')),
+    ).toEqual(['nea:host:heliocentric-only'])
+    expect(wrapper.text()).toContain('1 of 2 hosts positioned')
+
+    await wrapper.get('[data-coordinate-frame="galactocentric"]').trigger('click')
+
+    expect(
+      wrapper.findAll('[data-host-point]').map((point) => point.attributes('data-host-id')),
+    ).toEqual(['nea:host:galactocentric-only'])
+    expect(wrapper.text()).toContain('1 of 2 hosts positioned')
+  })
 })
