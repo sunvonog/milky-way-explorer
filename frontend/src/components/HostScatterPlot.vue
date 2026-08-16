@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { format, scaleLinear, scaleSqrt } from 'd3'
 
 import type { CartesianPosition, HostVisualizationRecord } from '@/data/hostVisualization'
@@ -8,11 +8,23 @@ interface Props {
   records: HostVisualizationRecord[]
 }
 
+interface CoordinateFramePresentation {
+  label: string
+  unit: string
+  description: string
+}
+
+type CoordinateFrame = 'heliocentric' | 'galactocentric'
+
 type PositionedHost = HostVisualizationRecord & {
   heliocentricPc: CartesianPosition
 }
 
 const props = defineProps<Props>()
+
+const selectedFrame = ref<CoordinateFrame>('heliocentric')
+
+const selectedFramePresentation = computed(() => coordinateFrames[selectedFrame.value])
 
 const width = 800
 const height = 600
@@ -30,6 +42,21 @@ const plotHeight = height - margin.top - margin.bottom
 const positionedRecords = computed<PositionedHost[]>(() =>
   props.records.filter((record): record is PositionedHost => record.heliocentricPc !== null),
 )
+
+const coordinateFrames: Record<CoordinateFrame, CoordinateFramePresentation> = {
+  heliocentric: {
+    label: 'Heliocentric',
+    unit: 'pc',
+    description: 'Top-down Cartesian view centred on the Sun.',
+  },
+  galactocentric: {
+    label: 'Galactocentric',
+    unit: 'kpc',
+    description: 'Top-down Cartesian view centred on the Milky Way centre.',
+  },
+}
+
+const coordinateFrameOptions: readonly CoordinateFrame[] = ['heliocentric', 'galactocentric']
 
 const plot = computed(() => {
   // Include the Sun so the origin always remains visible.
@@ -95,11 +122,39 @@ function pointClass(record: PositionedHost): string {
 
 <template>
   <figure class="m-0 grid gap-3 text-slate-100">
-    <figcaption class="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2">
-      <strong class="text-lg font-semibold">Heliocentric exoplanet hosts</strong>
-      <span class="text-sm text-slate-400">
-        {{ positionedRecords.length }} of {{ records.length }} hosts positioned
-      </span>
+    <figcaption class="grid gap-3">
+      <div class="flex flex-wrap items-baseline justify-between, gap-x-4, gap-y-2">
+        <strong class="text-lg font-semibold"
+          >{{ selectedFramePresentation.label }} exoplanet hosts</strong
+        >
+
+        <span class="text-sm text-slate-400">
+          {{ positionedRecords.length }} of {{ records.length }} hosts positioned
+        </span>
+      </div>
+
+      <div
+        class="flex w-fit rounded-lg border border-slate-700 bg-slate-900 p-1"
+        role="group"
+        aria-label="Coordinate frame"
+      >
+        <button
+          v-for="frameId in coordinateFrameOptions"
+          :key="frameId"
+          type="button"
+          :data-coordinate-frame="frameId"
+          :aria-pressed="selectedFrame === frameId"
+          class="rounded-md px-3 py-1.5 text-sm font-medium transition"
+          :class="
+            selectedFrame === frameId
+              ? 'bg-slate-100 text-slate-950'
+              : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+          "
+          @click="selectedFrame = frameId"
+        >
+          {{ coordinateFrames[frameId].label }}
+        </button>
+      </div>
     </figcaption>
 
     <svg
@@ -108,10 +163,12 @@ function pointClass(record: PositionedHost): string {
       role="img"
       aria-labelledby="host-scatter-title host-scatter-description"
     >
-      <title id="host-scatter-title">Heliocentric exoplanet-host positions</title>
+      <title id="host-scatter-title">
+        {{ selectedFramePresentation.label }}exoplanet-host positions
+      </title>
       <desc id="host-scatter-description">
-        Top-down Cartesian view centred on the Sun. Point size represents the number of published
-        planets.
+        {{ selectedFramePresentation.description }}
+        Point size represents the number of published planets
       </desc>
 
       <rect
@@ -192,6 +249,7 @@ function pointClass(record: PositionedHost): string {
       </circle>
 
       <circle
+        v-if="selectedFrame === 'heliocentric'"
         data-sun-origin
         class="fill-yellow-300 stroke-yellow-100 stroke-2"
         :cx="plot.xScale(0)"
@@ -201,6 +259,17 @@ function pointClass(record: PositionedHost): string {
         <title>Sun — heliocentric origin</title>
       </circle>
 
+      <circle
+        v-else
+        data-galactic-centre-origin
+        class="fill-fuchsia-300 stroke-fuchsia-100 stroke-2"
+        :cx="plot.xScale(0)"
+        :cy="plot.yScale(0)"
+        r="5"
+      >
+        <title>Galactic centre — Galactocentric origin</title>
+      </circle>
+
       <text
         data-axis-title="x"
         class="fill-slate-300 text-sm font-semibold"
@@ -208,7 +277,7 @@ function pointClass(record: PositionedHost): string {
         :x="margin.left + plotWidth / 2"
         :y="height - 14"
       >
-        Heliocentric x (pc)
+        {{ selectedFramePresentation.label }} x ({{ selectedFramePresentation.unit }})
       </text>
 
       <text
@@ -220,7 +289,7 @@ function pointClass(record: PositionedHost): string {
           rotate(-90)
         `"
       >
-        Heliocentric y (pc)
+        {{ selectedFramePresentation.label }} y ({{ selectedFramePresentation.unit }})
       </text>
     </svg>
   </figure>

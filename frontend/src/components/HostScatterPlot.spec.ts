@@ -110,4 +110,30 @@ describe('HostScatterPlot', () => {
 
     expect(gammaRadius).toBeGreaterThan(alphaRadius)
   })
+
+  it('switches between heliocentric and galactocentric frames', async () => {
+    const wrapper = mount(HostScatterPlot, {
+      props: { records },
+    })
+
+    const heliocentricButton = wrapper.get('[data-coordinate-frame="heliocentric"]')
+    const galactocentricButton = wrapper.get('[data-coordinate-frame="galactocentric"]')
+
+    expect(heliocentricButton.attributes('aria-pressed')).toBe('true')
+    expect(galactocentricButton.attributes('aria-pressed')).toBe('false')
+    expect(wrapper.find('[data-sun-origin]').exists()).toBe(true)
+    expect(wrapper.find('[data-galactic-centre-origin]').exists()).toBe(false)
+
+    await galactocentricButton.trigger('click')
+
+    expect(heliocentricButton.attributes('aria-pressed')).toBe('false')
+    expect(galactocentricButton.attributes('aria-pressed')).toBe('true')
+
+    expect(wrapper.text()).toContain('Galactocentric exoplanet hosts')
+    expect(wrapper.get('[data-axis-title="x"]').text()).toBe('Galactocentric x (kpc)')
+    expect(wrapper.get('[data-axis-title="y"]').text()).toBe('Galactocentric y (kpc)')
+
+    expect(wrapper.find('[data-sun-origin]').exists()).toBe(false)
+    expect(wrapper.find('[data-galactic-centre-origin]').exists()).toBe(true)
+  })
 })
