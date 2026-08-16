@@ -7,7 +7,8 @@ import {
   SUN_GALACTOCENTRIC_Z_KPC,
 } from '@/lib/coords'
 
-import type { CartesianPosition, HostVisualizationRecord } from '@/data/hostVisualization'
+import type { CartesianPosition } from '@/domain/coordinates'
+import type { HostVisualizationRecord } from '@/domain/host'
 
 interface Props {
   records: HostVisualizationRecord[]
