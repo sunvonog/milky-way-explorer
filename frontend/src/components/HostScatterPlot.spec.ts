@@ -118,7 +118,7 @@ describe('HostScatterPlot', () => {
 
     const heliocentricButton = wrapper.get('[data-coordinate-frame="heliocentric"]')
     const galactocentricButton = wrapper.get('[data-coordinate-frame="galactocentric"]')
-
+    expect(wrapper.get('#host-scatter-title').text()).toBe('Heliocentric exoplanet-host positions')
     expect(heliocentricButton.attributes('aria-pressed')).toBe('true')
     expect(galactocentricButton.attributes('aria-pressed')).toBe('false')
     expect(wrapper.find('[data-sun-origin]').exists()).toBe(true)
@@ -126,6 +126,9 @@ describe('HostScatterPlot', () => {
 
     await galactocentricButton.trigger('click')
 
+    expect(wrapper.get('#host-scatter-title').text()).toBe(
+      'Galactocentric exoplanet-host positions',
+    )
     expect(heliocentricButton.attributes('aria-pressed')).toBe('false')
     expect(galactocentricButton.attributes('aria-pressed')).toBe('true')
 
@@ -157,7 +160,6 @@ describe('HostScatterPlot', () => {
     const galactocentricAlphaX = Number(
       wrapper.get('[data-host-id="nea:host:alpha"]').attributes('cx'),
     )
-
     expect(galactocentricAlphaX).toBeLessThan(galactocentricOriginX)
   })
 
@@ -202,6 +204,7 @@ describe('HostScatterPlot', () => {
     const heliocentricSun = wrapper.get('[data-sun-reference]')
     const heliocentricGalacticCentre = wrapper.get('[data-galactic-centre-reference]')
 
+    expect(wrapper.get('[data-sun-reference] title').text()).toBe('Sun — heliocentric origin')
     expect(Number(heliocentricGalacticCentre.attributes('cx'))).toBeGreaterThan(
       Number(heliocentricSun.attributes('cx')),
     )
@@ -211,6 +214,7 @@ describe('HostScatterPlot', () => {
     const galactocentricSun = wrapper.get('[data-sun-reference]')
     const galactocentricGalacticCentre = wrapper.get('[data-galactic-centre-reference]')
 
+    expect(wrapper.get('[data-sun-reference] title').text()).toBe('Sun — reference point')
     expect(Number(galactocentricSun.attributes('cx'))).toBeLessThan(
       Number(galactocentricGalacticCentre.attributes('cx')),
     )
