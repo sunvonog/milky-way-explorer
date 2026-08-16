@@ -5,7 +5,7 @@ import {
   SUN_GALACTOCENTRIC_R_KPC,
   SUN_GALACTOCENTRIC_X_KPC,
   SUN_GALACTOCENTRIC_Z_KPC,
-} from '@/lib/coords'
+} from '@/domain/coordinates'
 
 import type { CartesianPosition } from '@/domain/coordinates'
 import type { HostVisualizationRecord } from '@/domain/host'

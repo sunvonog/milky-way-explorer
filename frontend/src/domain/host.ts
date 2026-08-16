@@ -17,7 +17,7 @@ export interface HostVisualizationRecord {
   hostId: string
   hostName: string
 
-  /** Stored as a string because Gaia IDs exceed JavaScript's safe integer range*/
+  /** Stored as a string because Gaia IDs exceed JavaScript's safe integer range. */
   gaiaSourceId: string | null
 
   planetCount: number
@@ -26,16 +26,16 @@ export interface HostVisualizationRecord {
   isCircumbinary: boolean
   positionStatus: PositionStatus
 
-  /** Selected distance from the sun in parsecs. */
+  /** Selected distance from the Sun in parsecs. */
   distancePc: number | null
 
   distanceMethod: DistanceMethod | null
   distanceQuality: DistanceQuality | null
 
-  /** Sun-centred Galactic Cartesian coordinaets in parsecs. */
+  /** Sun-centred Galactic Cartesian coordinates in parsecs. */
   heliocentricPc: CartesianPosition | null
 
-  /** Astropy v4.0 Galactocentric Cartesian coordinates */
+  /** Astropy v4.0 Galactocentric Cartesian coordinates in kiloparsecs. */
   galactocentricKpc: CartesianPosition | null
 
   photGMeanMagnitude: number | null
