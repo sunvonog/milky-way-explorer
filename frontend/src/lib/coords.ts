@@ -1,6 +1,16 @@
 // frontend/src/lib/coords.ts
-/** Galactrocentric frame: Sun at (-R0, 0, Z0), Galactic centre at origin. */
+/** Galactocentric frame: Sun at (-R0, 0, Z0), Galactic centre at origin. */
 export const SUN_GALACTOCENTRIC_R_KPC = 8.122
+/** Solar height above the Galactic midplane in Astropy's v4.0 frame. */
+export const SUN_GALACTOCENTRIC_Z_KPC = 0.0208
+
+/**
+ * Astropy tilts the Galactocentric x-axis to account for the solar height,
+ * so the Sun's x coordinate is slightly smaller in magnitude than R0.
+ */
+export const SUN_GALACTOCENTRIC_X_KPC = -Math.sqrt(
+  SUN_GALACTOCENTRIC_R_KPC ** 2 - SUN_GALACTOCENTRIC_Z_KPC ** 2,
+)
 
 export interface Spherical {
   lDeg: number

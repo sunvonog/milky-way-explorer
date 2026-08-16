@@ -1,7 +1,11 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { format, scaleLinear, scaleSqrt } from 'd3'
-import { SUN_GALACTOCENTRIC_R_KPC } from '@/lib/coords'
+import {
+  SUN_GALACTOCENTRIC_R_KPC,
+  SUN_GALACTOCENTRIC_X_KPC,
+  SUN_GALACTOCENTRIC_Z_KPC,
+} from '@/lib/coords'
 
 import type { CartesianPosition, HostVisualizationRecord } from '@/data/hostVisualization'
 
@@ -85,9 +89,9 @@ const coordinateFrames: Record<CoordinateFrame, CoordinateFramePresentation> = {
     description: 'Top-down Cartesian view centred on the Milky Way centre.',
     positionField: 'galactocentricKpc',
     sunPosition: {
-      x: -SUN_GALACTOCENTRIC_R_KPC,
+      x: SUN_GALACTOCENTRIC_X_KPC,
       y: 0,
-      z: 0,
+      z: SUN_GALACTOCENTRIC_Z_KPC,
     },
     galacticCentrePosition: { x: 0, y: 0, z: 0 },
   },
@@ -97,7 +101,7 @@ const coordinateFrameOptions: readonly CoordinateFrame[] = ['heliocentric', 'gal
 
 const plot = computed(() => {
   const { sunPosition, galacticCentrePosition } = selectedFramePresentation.value
-  // Include the selected coordinate system's origin
+  // Include both reference points so they remain visible
   const xValues = [
     sunPosition.x,
     galacticCentrePosition.x,
@@ -210,7 +214,7 @@ function pointClass(record: HostVisualizationRecord): string {
       aria-labelledby="host-scatter-title host-scatter-description"
     >
       <title id="host-scatter-title">
-        {{ selectedFramePresentation.label }}exoplanet-host positions
+        {{ selectedFramePresentation.label }} exoplanet-host positions
       </title>
       <desc id="host-scatter-description">
         {{ selectedFramePresentation.description }}
@@ -304,7 +308,7 @@ function pointClass(record: HostVisualizationRecord): string {
       >
         <title>
           {{
-            selectedFrame === 'heliocentric' ? 'Sun — heliocentrc origin' : 'Sun — reference point'
+            selectedFrame === 'heliocentric' ? 'Sun — heliocentric origin' : 'Sun — reference point'
           }}
         </title>
       </circle>
