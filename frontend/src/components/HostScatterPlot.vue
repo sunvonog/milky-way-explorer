@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { format, scaleLinear, scaleSqrt } from 'd3'
+import { SUN_GALACTOCENTRIC_R_KPC } from '@/lib/coords'
 
 import type { CartesianPosition, HostVisualizationRecord } from '@/data/hostVisualization'
 
@@ -13,6 +14,14 @@ interface CoordinateFramePresentation {
   unit: string
   description: string
   positionField: PositionField
+  sunPosition: PlotPosition
+  galacticCentrePosition: PlotPosition
+}
+
+interface PlotPosition {
+  x: number
+  y: number
+  z: number
 }
 
 type CoordinateFrame = 'heliocentric' | 'galactocentric'
@@ -63,21 +72,42 @@ const coordinateFrames: Record<CoordinateFrame, CoordinateFramePresentation> = {
     unit: 'pc',
     description: 'Top-down Cartesian view centred on the Sun.',
     positionField: 'heliocentricPc',
+    sunPosition: { x: 0, y: 0, z: 0 },
+    galacticCentrePosition: {
+      x: SUN_GALACTOCENTRIC_R_KPC * 1000,
+      y: 0,
+      z: 0,
+    },
   },
   galactocentric: {
     label: 'Galactocentric',
     unit: 'kpc',
     description: 'Top-down Cartesian view centred on the Milky Way centre.',
     positionField: 'galactocentricKpc',
+    sunPosition: {
+      x: -SUN_GALACTOCENTRIC_R_KPC,
+      y: 0,
+      z: 0,
+    },
+    galacticCentrePosition: { x: 0, y: 0, z: 0 },
   },
 }
 
 const coordinateFrameOptions: readonly CoordinateFrame[] = ['heliocentric', 'galactocentric']
 
 const plot = computed(() => {
+  const { sunPosition, galacticCentrePosition } = selectedFramePresentation.value
   // Include the selected coordinate system's origin
-  const xValues = [0, ...positionedRecords.value.map(({ position }) => position.x)]
-  const yValues = [0, ...positionedRecords.value.map(({ position }) => position.y)]
+  const xValues = [
+    sunPosition.x,
+    galacticCentrePosition.x,
+    ...positionedRecords.value.map(({ position }) => position.x),
+  ]
+  const yValues = [
+    sunPosition.y,
+    galacticCentrePosition.y,
+    ...positionedRecords.value.map(({ position }) => position.y),
+  ]
 
   const xMinimum = Math.min(...xValues)
   const xMaximum = Math.max(...xValues)
@@ -265,25 +295,35 @@ function pointClass(record: HostVisualizationRecord): string {
       </circle>
 
       <circle
-        v-if="selectedFrame === 'heliocentric'"
-        data-sun-origin
+        data-sun-reference
+        :data-sun-origin="selectedFrame === 'heliocentric' ? '' : undefined"
         class="fill-yellow-300 stroke-yellow-100 stroke-2"
-        :cx="plot.xScale(0)"
-        :cy="plot.yScale(0)"
+        :cx="plot.xScale(selectedFramePresentation.sunPosition.x)"
+        :cy="plot.yScale(selectedFramePresentation.sunPosition.y)"
         r="5"
       >
-        <title>Sun — heliocentric origin</title>
+        <title>
+          {{
+            selectedFrame === 'heliocentric' ? 'Sun — heliocentrc origin' : 'Sun — reference point'
+          }}
+        </title>
       </circle>
 
       <circle
-        v-else
-        data-galactic-centre-origin
+        data-galactic-centre-reference
+        :data-galactic-centre-origin="selectedFrame === 'galactocentric' ? '' : undefined"
         class="fill-fuchsia-300 stroke-fuchsia-100 stroke-2"
-        :cx="plot.xScale(0)"
-        :cy="plot.yScale(0)"
+        :cx="plot.xScale(selectedFramePresentation.galacticCentrePosition.x)"
+        :cy="plot.yScale(selectedFramePresentation.galacticCentrePosition.y)"
         r="5"
       >
-        <title>Galactic centre — Galactocentric origin</title>
+        <title>
+          {{
+            selectedFrame === 'galactocentric'
+              ? 'Galactic centre — Galactocentric origin'
+              : 'Galactic centre — reference point'
+          }}
+        </title>
       </circle>
 
       <text

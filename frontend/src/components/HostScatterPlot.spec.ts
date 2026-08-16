@@ -193,4 +193,26 @@ describe('HostScatterPlot', () => {
     ).toEqual(['nea:host:galactocentric-only'])
     expect(wrapper.text()).toContain('1 of 2 hosts positioned')
   })
+
+  it('shows the Sun and Galactic centre in both coordinate frames', async () => {
+    const wrapper = mount(HostScatterPlot, {
+      props: { records },
+    })
+
+    const heliocentricSun = wrapper.get('[data-sun-reference]')
+    const heliocentricGalacticCentre = wrapper.get('[data-galactic-centre-reference]')
+
+    expect(Number(heliocentricGalacticCentre.attributes('cx'))).toBeGreaterThan(
+      Number(heliocentricSun.attributes('cx')),
+    )
+
+    await wrapper.get('[data-coordinate-frame="galactocentric"]').trigger('click')
+
+    const galactocentricSun = wrapper.get('[data-sun-reference]')
+    const galactocentricGalacticCentre = wrapper.get('[data-galactic-centre-reference]')
+
+    expect(Number(galactocentricSun.attributes('cx'))).toBeLessThan(
+      Number(galactocentricGalacticCentre.attributes('cx')),
+    )
+  })
 })
