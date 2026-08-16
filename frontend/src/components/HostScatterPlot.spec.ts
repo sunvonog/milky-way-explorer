@@ -136,4 +136,28 @@ describe('HostScatterPlot', () => {
     expect(wrapper.find('[data-sun-origin]').exists()).toBe(false)
     expect(wrapper.find('[data-galactic-centre-origin]').exists()).toBe(true)
   })
+
+  it('plots positions from the selected coordinate frame', async () => {
+    const wrapper = mount(HostScatterPlot, {
+      props: { records },
+    })
+
+    const heliocentricOriginX = Number(wrapper.get('[data-sun-origin]').attributes('cx'))
+    const heliocentricAlphaX = Number(
+      wrapper.get('[data-host-id="nea:host:alpha"]').attributes('cx'),
+    )
+
+    expect(heliocentricAlphaX).toBeGreaterThan(heliocentricOriginX)
+
+    await wrapper.get('[data-coordinate-frame="galactocentric"]').trigger('click')
+
+    const galactocentricOriginX = Number(
+      wrapper.get('[data-galactic-centre-origin]').attributes('cx'),
+    )
+    const galactocentricAlphaX = Number(
+      wrapper.get('[data-host-id="nea:host:alpha"]').attributes('cx'),
+    )
+
+    expect(galactocentricAlphaX).toBeLessThan(galactocentricOriginX)
+  })
 })

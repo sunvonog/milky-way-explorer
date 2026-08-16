@@ -12,12 +12,16 @@ interface CoordinateFramePresentation {
   label: string
   unit: string
   description: string
+  positionField: PositionField
 }
 
 type CoordinateFrame = 'heliocentric' | 'galactocentric'
 
-type PositionedHost = HostVisualizationRecord & {
-  heliocentricPc: CartesianPosition
+type PositionField = 'heliocentricPc' | 'galactocentricKpc'
+
+type PositionedHost = {
+  record: HostVisualizationRecord
+  position: CartesianPosition
 }
 
 const props = defineProps<Props>()
@@ -39,20 +43,32 @@ const margin = {
 const plotWidth = width - margin.left - margin.right
 const plotHeight = height - margin.top - margin.bottom
 
-const positionedRecords = computed<PositionedHost[]>(() =>
-  props.records.filter((record): record is PositionedHost => record.heliocentricPc !== null),
-)
+const positionedRecords = computed<PositionedHost[]>(() => {
+  const positionField = selectedFramePresentation.value.positionField
+
+  return props.records.reduce<PositionedHost[]>((result, record) => {
+    const position = record[positionField]
+
+    if (position !== null) {
+      result.push({ record, position })
+    }
+
+    return result
+  }, [])
+})
 
 const coordinateFrames: Record<CoordinateFrame, CoordinateFramePresentation> = {
   heliocentric: {
     label: 'Heliocentric',
     unit: 'pc',
     description: 'Top-down Cartesian view centred on the Sun.',
+    positionField: 'heliocentricPc',
   },
   galactocentric: {
     label: 'Galactocentric',
     unit: 'kpc',
     description: 'Top-down Cartesian view centred on the Milky Way centre.',
+    positionField: 'galactocentricKpc',
   },
 }
 
@@ -60,8 +76,8 @@ const coordinateFrameOptions: readonly CoordinateFrame[] = ['heliocentric', 'gal
 
 const plot = computed(() => {
   // Include the Sun so the origin always remains visible.
-  const xValues = [0, ...positionedRecords.value.map((record) => record.heliocentricPc.x)]
-  const yValues = [0, ...positionedRecords.value.map((record) => record.heliocentricPc.y)]
+  const xValues = [0, ...positionedRecords.value.map(({ position }) => position.x)]
+  const yValues = [0, ...positionedRecords.value.map(({ position }) => position.y)]
 
   const xMinimum = Math.min(...xValues)
   const xMaximum = Math.max(...xValues)
@@ -94,7 +110,7 @@ const plot = computed(() => {
 
   const largestPlanetCount = Math.max(
     1,
-    ...positionedRecords.value.map((record) => record.planetCount),
+    ...positionedRecords.value.map(({ record }) => record.planetCount),
   )
 
   const radiusScale = scaleSqrt().domain([1, largestPlanetCount]).range([3, 9]).clamp(true)
@@ -112,7 +128,7 @@ const formatTick = format('~s')
 
 const hostPointClass = 'stroke-slate-50 opacity-75 [stroke-width:0.6]'
 
-function pointClass(record: PositionedHost): string {
+function pointClass(record: HostVisualizationRecord): string {
   const distanceClass =
     record.distanceMethod === 'inverse_parallax' ? 'fill-amber-400' : 'fill-blue-400'
 
@@ -123,7 +139,7 @@ function pointClass(record: PositionedHost): string {
 <template>
   <figure class="m-0 grid gap-3 text-slate-100">
     <figcaption class="grid gap-3">
-      <div class="flex flex-wrap items-baseline justify-between, gap-x-4, gap-y-2">
+      <div class="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2">
         <strong class="text-lg font-semibold"
           >{{ selectedFramePresentation.label }} exoplanet hosts</strong
         >
@@ -168,7 +184,7 @@ function pointClass(record: PositionedHost): string {
       </title>
       <desc id="host-scatter-description">
         {{ selectedFramePresentation.description }}
-        Point size represents the number of published planets
+        Point size represents the number of published planets.
       </desc>
 
       <rect
@@ -232,19 +248,19 @@ function pointClass(record: PositionedHost): string {
       />
 
       <circle
-        v-for="record in positionedRecords"
-        :key="record.hostId"
+        v-for="positionedHost in positionedRecords"
+        :key="positionedHost.record.hostId"
         data-host-point
-        :data-host-id="record.hostId"
-        :class="pointClass(record)"
-        :cx="plot.xScale(record.heliocentricPc.x)"
-        :cy="plot.yScale(record.heliocentricPc.y)"
-        :r="plot.radiusScale(record.planetCount)"
+        :data-host-id="positionedHost.record.hostId"
+        :class="pointClass(positionedHost.record)"
+        :cx="plot.xScale(positionedHost.position.x)"
+        :cy="plot.yScale(positionedHost.position.y)"
+        :r="plot.radiusScale(positionedHost.record.planetCount)"
       >
         <title>
-          {{ record.hostName }}:
-          {{ record.planetCount }}
-          {{ record.planetCount === 1 ? 'planet' : 'planets' }}
+          {{ positionedHost.record.hostName }}:
+          {{ positionedHost.record.planetCount }}
+          {{ positionedHost.record.planetCount === 1 ? 'planet' : 'planets' }}
         </title>
       </circle>
 
