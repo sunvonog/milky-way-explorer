@@ -1,6 +1,11 @@
 // frontend/src/lib/coords.spec.ts
 import { describe, it, expect } from 'vitest'
-import { galacticToHeliocentric } from './coords'
+import {
+  galacticToHeliocentric,
+  SUN_GALACTOCENTRIC_R_KPC,
+  SUN_GALACTOCENTRIC_X_KPC,
+  SUN_GALACTOCENTRIC_Z_KPC,
+} from './coords'
 
 describe('galacticToHeliocentric', () => {
   it('places l=0, b=0 along +x', () => {
@@ -19,5 +24,15 @@ describe('galacticToHeliocentric', () => {
   it('places b=90 at the north Galactic pole', () => {
     const p = galacticToHeliocentric({ lDeg: 123, bDeg: 90, distanceKpc: 3 })
     expect(p.z).toBeCloseTo(3, 10)
+  })
+
+  it('places the Sun at the adopted Galactocentric distance and height', () => {
+    expect(Math.hypot(SUN_GALACTOCENTRIC_X_KPC, SUN_GALACTOCENTRIC_Z_KPC)).toBeCloseTo(
+      SUN_GALACTOCENTRIC_R_KPC,
+      10,
+    )
+
+    expect(SUN_GALACTOCENTRIC_X_KPC).toBeLessThan(0)
+    expect(SUN_GALACTOCENTRIC_Z_KPC).toBe(0.0208)
   })
 })
