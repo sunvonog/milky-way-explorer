@@ -22,12 +22,12 @@ onMounted(async () => {
 
 <template>
   <main class="mx-auto min-h-screen w-full max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
-    <h1 class="mb-6 text-2xl fontfont-semibold tracking-tight sm:text-4xl">Milky Way Explorer</h1>
+    <h1 class="mb-6 text-2xl font-semibold tracking-tight sm:text-4xl">Milky Way Explorer</h1>
 
     <p v-if="isLoading" class="text-sm text-slate-400">Loading exoplanet hosts...</p>
 
     <p
-      v-if="errorMessage"
+      v-else-if="errorMessage"
       class="rounded-lg border border-red-500/30 bg-red-950/40 px-4 py-3 text-red-200"
       role="alert"
     >
@@ -37,36 +37,3 @@ onMounted(async () => {
     <HostScatterPlot v-else :records="records" />
   </main>
 </template>
-
-<style>
-html {
-  color-scheme: dark;
-  background: #080c16;
-}
-
-body {
-  margin: 0;
-  min-width: 320px;
-  min-height: 100vh;
-  background: #080c16;
-  color: #e8edf7;
-  font-family:
-    Inter,
-    ui-sans-serif,
-    system-ui,
-    -apple-system,
-    BlinkMacSystemFont,
-    sans-serif;
-}
-
-main {
-  width: min(1100px, calc(100% - 2rem));
-  margin: 0 auto;
-  padding: 2rem 0;
-}
-
-h1 {
-  margin: 0 0 1.5rem;
-  font-size: clamp(1.5rem, 4vw, 2.5rem);
-}
-</style>

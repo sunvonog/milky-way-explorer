@@ -193,7 +193,7 @@ function pointClass(record: PositionedHost): string {
 
       <circle
         data-sun-origin
-        class="fill-yellow-300 stroke-yellow-100 stroke2"
+        class="fill-yellow-300 stroke-yellow-100 stroke-2"
         :cx="plot.xScale(0)"
         :cy="plot.yScale(0)"
         r="5"
