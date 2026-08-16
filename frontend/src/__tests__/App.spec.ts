@@ -23,6 +23,7 @@ describe('App', () => {
 
     expect(wrapper.text()).toContain('Milky Way Explorer')
     expect(wrapper.text()).toContain('Loading exoplanet hosts...')
+    expect(wrapper.findComponent(HostScatterPlot).exists()).toBe(false)
   })
 
   it('renders the scatter plot after loading', async () => {
