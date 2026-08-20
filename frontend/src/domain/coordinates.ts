@@ -1,6 +1,6 @@
 /**
  * Cartesian position whose frame and unit are specified by the owning field.
- * */
+ */
 export interface CartesianPosition {
   x: number
   y: number
@@ -15,7 +15,7 @@ export const SUN_GALACTOCENTRIC_R_KPC = 8.122
 
 /**
  * Solar height above the Galactic midplane in Astropy's v4.0
- * Source: Bennet & Bovy (2019)
+ * Source: Bennett & Bovy (2019)
  */
 export const SUN_GALACTOCENTRIC_Z_KPC = 0.0208
 

@@ -1,37 +1,19 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { format, scaleLinear, scaleSqrt } from 'd3'
-import {
-  SUN_GALACTOCENTRIC_R_KPC,
-  SUN_GALACTOCENTRIC_X_KPC,
-  SUN_GALACTOCENTRIC_Z_KPC,
-} from '@/domain/coordinates'
 
 import type { CartesianPosition } from '@/domain/coordinates'
 import type { HostVisualizationRecord } from '@/domain/host'
 
+import {
+  coordinateFrameIds,
+  coordinateFrames,
+  type coordinateFrameId,
+} from '@/domain/coordinateFrames'
+
 interface Props {
   records: HostVisualizationRecord[]
 }
-
-interface CoordinateFramePresentation {
-  label: string
-  unit: string
-  description: string
-  positionField: PositionField
-  sunPosition: PlotPosition
-  galacticCentrePosition: PlotPosition
-}
-
-interface PlotPosition {
-  x: number
-  y: number
-  z: number
-}
-
-type CoordinateFrame = 'heliocentric' | 'galactocentric'
-
-type PositionField = 'heliocentricPc' | 'galactocentricKpc'
 
 type PositionedHost = {
   record: HostVisualizationRecord
@@ -40,7 +22,7 @@ type PositionedHost = {
 
 const props = defineProps<Props>()
 
-const selectedFrame = ref<CoordinateFrame>('heliocentric')
+const selectedFrame = ref<coordinateFrameId>('heliocentric')
 
 const selectedFramePresentation = computed(() => coordinateFrames[selectedFrame.value])
 
@@ -70,35 +52,6 @@ const positionedRecords = computed<PositionedHost[]>(() => {
     return result
   }, [])
 })
-
-const coordinateFrames: Record<CoordinateFrame, CoordinateFramePresentation> = {
-  heliocentric: {
-    label: 'Heliocentric',
-    unit: 'pc',
-    description: 'Top-down Cartesian view centred on the Sun.',
-    positionField: 'heliocentricPc',
-    sunPosition: { x: 0, y: 0, z: 0 },
-    galacticCentrePosition: {
-      x: SUN_GALACTOCENTRIC_R_KPC * 1000,
-      y: 0,
-      z: 0,
-    },
-  },
-  galactocentric: {
-    label: 'Galactocentric',
-    unit: 'kpc',
-    description: 'Top-down Cartesian view centred on the Milky Way centre.',
-    positionField: 'galactocentricKpc',
-    sunPosition: {
-      x: SUN_GALACTOCENTRIC_X_KPC,
-      y: 0,
-      z: SUN_GALACTOCENTRIC_Z_KPC,
-    },
-    galacticCentrePosition: { x: 0, y: 0, z: 0 },
-  },
-}
-
-const coordinateFrameOptions: readonly CoordinateFrame[] = ['heliocentric', 'galactocentric']
 
 const plot = computed(() => {
   const { sunPosition, galacticCentrePosition } = selectedFramePresentation.value
@@ -190,7 +143,7 @@ function pointClass(record: HostVisualizationRecord): string {
         aria-label="Coordinate frame"
       >
         <button
-          v-for="frameId in coordinateFrameOptions"
+          v-for="frameId in coordinateFrameIds"
           :key="frameId"
           type="button"
           :data-coordinate-frame="frameId"
