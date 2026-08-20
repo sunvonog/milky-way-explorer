@@ -7,7 +7,7 @@ import {
 
 export const coordinateFrameIds = ['heliocentric', 'galactocentric'] as const
 
-export type coordinateFrameId = (typeof coordinateFrameIds)[number]
+export type CoordinateFrameId = (typeof coordinateFrameIds)[number]
 
 export type PositionField = 'heliocentricPc' | 'galactocentricKpc'
 
@@ -51,4 +51,4 @@ export const coordinateFrames = {
       z: 0,
     },
   },
-} satisfies Record<coordinateFrameId, CoordinateFramePresentation>
+} satisfies Record<CoordinateFrameId, CoordinateFramePresentation>

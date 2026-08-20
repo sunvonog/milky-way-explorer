@@ -8,7 +8,7 @@ import type { HostVisualizationRecord } from '@/domain/host'
 import {
   coordinateFrameIds,
   coordinateFrames,
-  type coordinateFrameId,
+  type CoordinateFrameId,
 } from '@/domain/coordinateFrames'
 
 interface Props {
@@ -22,7 +22,7 @@ type PositionedHost = {
 
 const props = defineProps<Props>()
 
-const selectedFrame = ref<coordinateFrameId>('heliocentric')
+const selectedFrame = ref<CoordinateFrameId>('heliocentric')
 
 const selectedFramePresentation = computed(() => coordinateFrames[selectedFrame.value])
 
