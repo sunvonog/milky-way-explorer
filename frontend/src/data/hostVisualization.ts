@@ -2,38 +2,13 @@ import { tableFromIPC } from 'apache-arrow'
 
 const HOST_VISUALIZATION_FILENAME = 'exoplanet_hosts.arrow'
 
-export type PositionStatus = 'available' | 'no_accepted_distance' | 'no_exact_gaia_source'
-
-export type DistanceMethod = 'gaia_gspphot' | 'inverse_parallax' | 'unavailable'
-
-export type DistanceQuality =
-  | 'positive_gspphot_estimate'
-  | 'snr_ge_5_ruwe_acceptable'
-  | 'unavailable'
-
-export interface CartesianPosition {
-  x: number
-  y: number
-  z: number
-}
-
-export interface HostVisualizationRecord {
-  hostId: string
-  hostName: string
-  gaiaSourceId: string | null
-  planetCount: number
-  archivePlanetCount: number
-  planetCountMatchesArchive: boolean
-  isCircumbinary: boolean
-  positionStatus: PositionStatus
-  distancePc: number | null
-  distanceMethod: DistanceMethod | null
-  distanceQuality: DistanceQuality | null
-  heliocentricPc: CartesianPosition | null
-  galactocentricKpc: CartesianPosition | null
-  photGMeanMagnitude: number | null
-  bpRpColor: number | null
-}
+import type { CartesianPosition } from '@/domain/coordinates'
+import type {
+  DistanceMethod,
+  DistanceQuality,
+  HostVisualizationRecord,
+  PositionStatus,
+} from '@/domain/host'
 
 type ArrowRow = Record<string, unknown>
 

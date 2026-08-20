@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 
-import { loadHostVisualization, type HostVisualizationRecord } from '@/data/hostVisualization'
+import { loadHostVisualization } from '@/data/hostVisualization'
 import HostScatterPlot from '@/components/HostScatterPlot.vue'
+import type { HostVisualizationRecord } from './domain/host'
 
 const records = ref<HostVisualizationRecord[]>([])
 const isLoading = ref(true)
