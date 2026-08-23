@@ -219,4 +219,19 @@ describe('HostScatterPlot', () => {
       Number(galactocentricGalacticCentre.attributes('cx')),
     )
   })
+
+  it('renders grid lines at their individual tick positions', () => {
+    const wrapper = mount(HostScatterPlot, {
+      props: { records },
+    })
+
+    const xGridLines = wrapper.findAll('[data-x-grid-line]')
+    const yGridLines = wrapper.findAll('[data-y-grid-line]')
+
+    expect(new Set(xGridLines.map((line) => line.attributes('x1'))).size).toBeGreaterThan(1)
+    expect(new Set(yGridLines.map((line) => line.attributes('y1'))).size).toBeGreaterThan(1)
+
+    expect(xGridLines.every((line) => line.attributes('x1') === line.attributes('x2'))).toBe(true)
+    expect(yGridLines.every((line) => line.attributes('y1') === line.attributes('y2'))).toBe(true)
+  })
 })
