@@ -78,14 +78,22 @@ The minimum viable product includes:
 
 ### Frontend
 
+Current prototype:
+
 - Node.js LTS
 - Vue 3
 - TypeScript
 - Vite
-- deck.gl
+- Tailwind CSS
 - D3
-- Motion for Vue
 - Apache Arrow JavaScript
+- Vue-managed SVG rendering
+
+Planned for the public MVP:
+
+- deck.gl / WebGL rendering
+- Motion for Vue (or equivalent transitions)
+- search and object-detail API client
 
 ### Backend
 
@@ -175,10 +183,12 @@ milky-way-explorer/
 
 ### Phase 5 — Frontend visualization
 
-- Render the density background.
+- Render the density background (planned WebGL / deck.gl path).
 - Render exoplanet hosts as a separate interactive layer.
-- Add view switching and Motion-powered transitions.
-- Add search and details.
+- Current prototype: Vue SVG + D3 host scatter plot with heliocentric /
+  Galactocentric frame switching over `exoplanet_hosts.arrow`.
+- Add view switching and Motion-powered transitions (planned).
+- Add search and details (planned).
 
 ### Phase 6 — CI/CD and deployment
 

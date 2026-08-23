@@ -112,6 +112,43 @@ flowchart LR
 
 ### 4.1 Frontend application
 
+#### Current prototype (implemented)
+
+Responsibilities:
+
+- load `exoplanet_hosts.arrow` from the configured data base URL;
+- validate Arrow rows into typed host visualization records;
+- project heliocentric and Galactocentric positions with an equal physical scale;
+- render an interactive SVG scatter plot of exoplanet hosts.
+
+Module boundaries:
+
+```text
+domain/          scientific types, coordinates, frame definitions
+data/            Arrow transport and validation
+visualization/   pure D3 plot-model construction
+components/      Vue SVG presentation and interaction state
+```
+
+Dependency direction: components and App depend on data + visualization +
+domain; visualization and data depend on domain; domain has no UI or transport
+dependencies.
+
+Current stack:
+
+- Vue 3;
+- TypeScript;
+- Vite;
+- Tailwind CSS;
+- D3 (scales, ticks, projection only);
+- Apache Arrow JavaScript;
+- Vue-managed SVG rendering.
+
+There is no router, global store, API client, or WebGL renderer in the current
+package. See [../frontend/README.md](../frontend/README.md).
+
+#### Target MVP (planned)
+
 Responsibilities:
 
 - render Galactic density layers;
@@ -123,15 +160,11 @@ Responsibilities:
 - search hosts and planets;
 - expose quality and provenance labels.
 
-Recommended stack:
+Planned stack additions:
 
-- Vue 3;
-- TypeScript;
-- Vite;
-- deck.gl;
-- D3;
-- Motion for Vue;
-- Apache Arrow JavaScript.
+- deck.gl / WebGL rendering;
+- Motion for Vue (or equivalent transition layer);
+- metadata and search API client.
 
 ### 4.2 FastAPI service
 
@@ -215,34 +248,43 @@ Examples:
 
 ```text
 /data/builds/{build_id}/milky-way-density.arrow
-/data/builds/{build_id}/exoplanet-hosts.arrow
+/data/builds/{build_id}/exoplanet_hosts.arrow
 /data/builds/{build_id}/manifest.json
 ```
 
+In local development the current host artifact is also served directly by
+FastAPI at `/data/exoplanet_hosts.arrow` from `data/frontend/`.
+
 ## 5. Runtime request model
 
-### Initial page load
+### Current prototype
+
+```text
+GET /data/exoplanet_hosts.arrow
+```
+
+### Target MVP — initial page load
 
 ```text
 GET /data/current/manifest.json
 GET /data/current/milky-way-density.arrow
-GET /data/current/exoplanet-hosts.arrow
+GET /data/current/exoplanet_hosts.arrow
 ```
 
-### Object selection
+### Target MVP — object selection
 
 ```text
 GET /api/v1/sources/{gaia_source_id}
 GET /api/v1/systems/{host_id}
 ```
 
-### Search
+### Target MVP — search
 
 ```text
 GET /api/v1/search?q=TRAPPIST-1
 ```
 
-### Planet details
+### Target MVP — planet details
 
 ```text
 GET /api/v1/planets/{planet_id}
@@ -250,7 +292,16 @@ GET /api/v1/planets/{planet_id}
 
 ## 6. Rendering architecture
 
-The renderer uses separate layers:
+### Current prototype
+
+The implemented host view is a Vue-managed SVG scatter plot. D3 builds a pure
+plot model (equal physical scale, ticks, reference points, planet-count radii);
+the component renders circles and frame controls. Hosts without positions for
+the selected frame are retained in the dataset but omitted from the plot.
+
+### Target MVP layers
+
+The public renderer is planned to use separate WebGL / deck.gl layers:
 
 ```text
 DensityLayer
