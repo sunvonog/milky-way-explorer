@@ -81,6 +81,15 @@ class GaiaHostBatch:
     source_ids: tuple[int, ...]
 
 
+@dataclass(frozen=True, slots=True)
+class GaiaBackgroundBatch:
+    """One deterministic half-open Gaia random-index interval."""
+
+    batch_number: int
+    random_index_start: int
+    random_index_stop: int
+
+
 def build_gaia_host_ids(hosts: pl.DataFrame) -> pl.DataFrame:
     """Build the distinct Gaia source-ID manifest for exoplanet hosts."""
     return (
@@ -106,6 +115,32 @@ def plan_gaia_host_batches(host_ids: pl.DataFrame, *, batch_size: int) -> list[G
             range(0, len(source_ids), batch_size),
             start=1,
         )
+    ]
+
+
+def plan_gaia_background_batches(
+    *, source_count: int, batch_size: int
+) -> list[GaiaBackgroundBatch]:
+    """Plan contiguous random-index ranges for a repeatable Gaia subset.
+
+    Gaia ``random_index`` is a random permutation of the integers from
+    zero through N-1. Consequently, a half-open interval ``[start, stop)``
+    contains exactly ``stop - start`` sources, and adjacent intervals neither
+    overlap nor leave gaps.
+    """
+    if source_count <= 0:
+        raise ValueError("source_count must be positive")
+
+    if batch_size <= 0:
+        raise ValueError("batch_size must be positive")
+
+    return [
+        GaiaBackgroundBatch(
+            batch_number=batch_number,
+            random_index_start=start,
+            random_index_stop=min(start + batch_size, source_count),
+        )
+        for batch_number, start in enumerate(range(0, source_count, batch_size), start=1)
     ]
 
 

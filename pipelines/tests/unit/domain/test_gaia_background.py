@@ -3,8 +3,10 @@ import pytest
 
 from app.domain.gaia import (
     GAIA_BACKGROUND_SOURCE_COLUMNS,
+    GaiaBackgroundBatch,
     add_gaia_distance,
     build_gaia_background_sources,
+    plan_gaia_background_batches,
 )
 
 
@@ -115,3 +117,23 @@ def test_inverse_parallax_omits_bounds_for_invalid_parallax_error():
     assert actual["distance_pc"] == pytest.approx(100.0)
     assert actual["distance_lower_pc"] is None
     assert actual["distance_upper_pc"] is None
+
+
+def test_plans_contiguous_background_random_index_batches():
+    actual: list[GaiaBackgroundBatch] = plan_gaia_background_batches(source_count=5, batch_size=2)
+
+    assert actual == [
+        GaiaBackgroundBatch(
+            batch_number=1,
+            random_index_start=0,
+            random_index_stop=2,
+        ),
+        GaiaBackgroundBatch(batch_number=2, random_index_start=2, random_index_stop=4),
+        GaiaBackgroundBatch(batch_number=3, random_index_start=4, random_index_stop=5),
+    ]
+
+
+@pytest.mark.parametrize(("source_count", "batch_size"), [(0, 2), (-1, 2), (5, 0), (5, -1)])
+def test_background_batch_planner_rejects_invalid_sizes(source_count: int, batch_size: int):
+    with pytest.raises(ValueError):
+        plan_gaia_background_batches(source_count=source_count, batch_size=batch_size)

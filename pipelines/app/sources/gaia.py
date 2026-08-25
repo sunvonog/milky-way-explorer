@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Protocol, cast
 
-from app.domain.gaia import GaiaHostBatch
+from app.domain.gaia import GaiaBackgroundBatch, GaiaHostBatch
 
 GAIA_SOURCE_TABLE = "gaiadr3.gaia_source"
 
@@ -108,19 +108,31 @@ def gaia_host_query(batch: GaiaHostBatch) -> str:
     )
 
 
+def gaia_background_query(batch: GaiaBackgroundBatch) -> str:
+    """Build an ADQL query for one repeatable Gaia background subset"""
+    if batch.random_index_start < 0 or batch.random_index_stop <= batch.random_index_start:
+        raise ValueError("Gaia background batch must have a valid random-index range")
+
+    columns = ",".join(GAIA_BACKGROUND_COLUMNS)
+
+    return (
+        f"SELECT {columns} "
+        f"FROM {GAIA_SOURCE_TABLE} "
+        f"WHERE random_index >= {batch.random_index_start} "
+        f"AND random_index < {batch.random_index_stop} "
+        "ORDER BY source_id"
+    )
+
+
 def _default_client() -> GaiaArchiveClient:
     from astroquery.gaia import Gaia
 
     return cast(GaiaArchiveClient, Gaia)
 
 
-def download_gaia_host_batch(
-    batch: GaiaHostBatch,
-    destination: Path,
-    *,
-    client: GaiaArchiveClient | None = None,
+def _download_gaia_batch(
+    *, batch_number: int, query: str, destination: Path, client: GaiaArchiveClient | None
 ) -> GaiaBatchDownload:
-    """Download one exact Gaia host batch using an asynchronous TAP job."""
     destination.parent.mkdir(parents=True, exist_ok=True)
     partial = destination.with_name(f".{destination.name}.part")
     error_output = Path(f"{partial}.error")
@@ -131,7 +143,7 @@ def download_gaia_host_batch(
 
     try:
         job = archive.launch_job_async(
-            gaia_host_query(batch),
+            query,
             output_file=str(partial),
             output_format="csv",
             dump_to_file=True,
@@ -141,13 +153,11 @@ def download_gaia_host_batch(
 
         phase = job.get_phase()
         if phase != "COMPLETED":
-            raise RuntimeError(
-                f"Gaia batch {batch.batch_number} job {job.jobid} ended in phase {phase}"
-            )
+            raise RuntimeError(f"Gaia batch {batch_number} job {job.jobid} ended in phase {phase}")
 
         if not partial.is_file() or partial.stat().st_size == 0:
             raise RuntimeError(
-                f"Gaia batch {batch.batch_number} job {job.jobid} did not produce an output file"
+                f"Gaia batch {batch_number} job {job.jobid} did not produce an output file"
             )
 
         partial.replace(destination)
@@ -166,6 +176,28 @@ def download_gaia_host_batch(
         error_output.unlink(missing_ok=True)
         raise
 
-    return GaiaBatchDownload(
-        batch_number=batch.batch_number, job_id=str(job.jobid), path=destination
+    return GaiaBatchDownload(batch_number=batch_number, job_id=str(job.jobid), path=destination)
+
+
+def download_gaia_host_batch(
+    batch: GaiaHostBatch, destination: Path, *, client: GaiaArchiveClient | None = None
+) -> GaiaBatchDownload:
+    """Download one exact Gaia host batch using an asynchronous TAP job."""
+    return _download_gaia_batch(
+        batch_number=batch.batch_number,
+        query=gaia_host_query(batch),
+        destination=destination,
+        client=client,
+    )
+
+
+def download_gaia_background_batch(
+    batch: GaiaBackgroundBatch, destination: Path, *, client: GaiaArchiveClient | None = None
+) -> GaiaBatchDownload:
+    """Download one repeatable Gaia background batch."""
+    return _download_gaia_batch(
+        batch_number=batch.batch_number,
+        query=gaia_background_query(batch),
+        destination=destination,
+        client=client,
     )
