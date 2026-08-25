@@ -21,7 +21,7 @@ def build_gaia_density_grid(
 
     The grid covers ``[-extent_kpc, +extent_kpc)`` on both axes.
     ``weighted_brightness`` is a relative G-band flux proxy,
-    ``10 ** (-0.4 * G)``, intended for rendering than photometry.
+    ``10 ** (-0.4 * G)``, intended for rendering rather than photometry.
     """
     if grid_size <= 0:
         raise ValueError("grid_size must be positive")

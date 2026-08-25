@@ -59,6 +59,19 @@ GAIA_HOST_SOURCE_COLUMNS = (
     "source",
 )
 
+GAIA_BACKGROUND_SOURCE_COLUMNS = (
+    "gaia_source_id",
+    "distance_pc",
+    "distance_method",
+    "distance_quality",
+    "galactocentric_x_kpc",
+    "galactocentric_y_kpc",
+    "galactocentric_z_kpc",
+    "phot_g_mean_magnitude",
+    "bp_rp_color",
+    "source",
+)
+
 
 @dataclass(frozen=True, slots=True)
 class GaiaHostBatch:
@@ -96,23 +109,24 @@ def plan_gaia_host_batches(host_ids: pl.DataFrame, *, batch_size: int) -> list[G
     ]
 
 
-def add_gaia_distance(frame: pl.DataFrame) -> pl.DataFrame:
-    """Select a distance with explicit method and quality provenance."""
-    has_gspphot = (
+def _has_positive_gspphot_distance() -> pl.Expr:
+    return (
         pl.col("distance_gspphot_pc").is_not_null() & (pl.col("distance_gspphot_pc") > 0)
     ).fill_null(False)
 
-    has_qualified_parallax = (
+
+def _has_qualified_parallax() -> pl.Expr:
+    return (
         (pl.col("parallax_mas") > 0)
         & (pl.col("parallax_over_error") >= 5)
         & (pl.col("ruwe").is_null() | (pl.col("ruwe") < 1.4))
     ).fill_null(False)
 
-    has_parallax_bounds = (
-        has_qualified_parallax
-        & (pl.col("parallax_error_mas") > 0)
-        & (pl.col("parallax_mas") - pl.col("parallax_error_mas") > 0)
-    ).fill_null(False)
+
+def _add_gaia_selected_distance(frame: pl.DataFrame) -> pl.DataFrame:
+    """Select a distance with shared method and quality provenance."""
+    has_gspphot = _has_positive_gspphot_distance()
+    has_qualified_parallax = _has_qualified_parallax()
 
     return frame.with_columns(
         distance_pc=(
@@ -120,20 +134,6 @@ def add_gaia_distance(frame: pl.DataFrame) -> pl.DataFrame:
             .then(pl.col("distance_gspphot_pc"))
             .when(has_qualified_parallax)
             .then(1000.0 / pl.col("parallax_mas"))
-            .otherwise(None)
-        ),
-        distance_lower_pc=(
-            pl.when(has_gspphot)
-            .then(pl.col("distance_gspphot_lower_pc"))
-            .when(has_parallax_bounds)
-            .then(1000.0 / (pl.col("parallax_mas") + pl.col("parallax_error_mas")))
-            .otherwise(None)
-        ),
-        distance_upper_pc=(
-            pl.when(has_gspphot)
-            .then(pl.col("distance_gspphot_upper_pc"))
-            .when(has_parallax_bounds)
-            .then(1000.0 / (pl.col("parallax_mas") - pl.col("parallax_error_mas")))
             .otherwise(None)
         ),
         distance_method=(
@@ -153,6 +153,35 @@ def add_gaia_distance(frame: pl.DataFrame) -> pl.DataFrame:
     )
 
 
+def add_gaia_distance(frame: pl.DataFrame) -> pl.DataFrame:
+    """Select a host distance and add available uncertainty bounds."""
+    has_gspphot = _has_positive_gspphot_distance()
+    has_qualified_parallax = _has_qualified_parallax()
+
+    has_parallax_bounds = (
+        has_qualified_parallax
+        & (pl.col("parallax_error_mas") > 0)
+        & (pl.col("parallax_mas") - pl.col("parallax_error_mas") > 0)
+    ).fill_null(False)
+
+    return _add_gaia_selected_distance(frame).with_columns(
+        distance_lower_pc=(
+            pl.when(has_gspphot)
+            .then(pl.col("distance_gspphot_lower_pc"))
+            .when(has_parallax_bounds)
+            .then(1000.0 / (pl.col("parallax_mas") + pl.col("parallax_error_mas")))
+            .otherwise(None)
+        ),
+        distance_upper_pc=(
+            pl.when(has_gspphot)
+            .then(pl.col("distance_gspphot_upper_pc"))
+            .when(has_parallax_bounds)
+            .then(1000.0 / (pl.col("parallax_mas") - pl.col("parallax_error_mas")))
+            .otherwise(None)
+        ),
+    )
+
+
 def build_gaia_host_sources(staging: pl.DataFrame) -> pl.DataFrame:
     """Build one published Gaia source record per valid host source ID."""
     return (
@@ -161,6 +190,17 @@ def build_gaia_host_sources(staging: pl.DataFrame) -> pl.DataFrame:
         .pipe(add_heliocentric_coordinates)
         .pipe(add_galactocentric_coordinates)
         .select(*GAIA_HOST_SOURCE_COLUMNS)
+        .sort("gaia_source_id")
+    )
+
+
+def build_gaia_background_sources(staging: pl.DataFrame) -> pl.DataFrame:
+    """Build density-ready Gaia sources from valid background rows."""
+    return (
+        staging.filter(pl.col("is_valid"))
+        .pipe(_add_gaia_selected_distance)
+        .pipe(add_galactocentric_coordinates)
+        .select(*GAIA_BACKGROUND_SOURCE_COLUMNS)
         .sort("gaia_source_id")
     )
 
