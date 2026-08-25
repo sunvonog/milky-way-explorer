@@ -75,3 +75,18 @@ def test_main_runs_gaia_host_refresh(
 
     assert result == 0
     assert calls == ["gaia-host-refresh"]
+
+
+def test_main_runs_gaia_background_refresh(monkeypatch: pytest.MonkeyPatch):
+    calls: list[str] = []
+
+    def record_gaia_background_refresh() -> Path:
+        calls.append("gaia-background-refresh")
+        return Path("data/raw/gaia_background/current")
+
+    monkeypatch.setattr(pipeline_main, "refresh_gaia_background", record_gaia_background_refresh)
+
+    result = pipeline_main.main(["refresh-gaia-background"])
+
+    assert result == 0
+    assert calls == ["gaia-background-refresh"]

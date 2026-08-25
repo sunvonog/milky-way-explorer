@@ -14,7 +14,7 @@ from app.artifacts import (
 )
 from app.config import REPO_ROOT, override_settings, reset_settings
 from app.domain.exoplanets import build_hosts
-from app.domain.gaia import GaiaHostBatch
+from app.domain.gaia import GaiaBackgroundBatch, GaiaHostBatch
 from app.flows.gaia import (
     build_gaia_host_manifest,
 )
@@ -111,6 +111,69 @@ def test_refresh_gaia_hosts_publishes_all_batches(data_root: Path, monkeypatch: 
     ]
 
 
+def test_refresh_gaia_background_publishes_all_batches(
+    data_root: Path, monkeypatch: pytest.MonkeyPatch
+):
+    override_settings(
+        gaia_background_source_count=5,
+        gaia_background_batch_size=2,
+    )
+    downloaded: list[GaiaBackgroundBatch] = []
+
+    def fake_download(batch: GaiaBackgroundBatch, destination: Path) -> GaiaBatchDownload:
+        downloaded.append(batch)
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        destination.write_text(
+            "source_id\n"
+            + "\n".join(
+                str(random_index)
+                for random_index in range(
+                    batch.random_index_start,
+                    batch.random_index_stop,
+                )
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+
+        return GaiaBatchDownload(
+            batch_number=batch.batch_number, job_id=f"job-{batch.batch_number}", path=destination
+        )
+
+    monkeypatch.setattr(
+        gaia_flow,
+        "download_gaia_background_batch",
+        fake_download,
+    )
+
+    current = gaia_flow.refresh_gaia_background()
+
+    assert downloaded == [
+        GaiaBackgroundBatch(1, 0, 2),
+        GaiaBackgroundBatch(2, 2, 4),
+        GaiaBackgroundBatch(3, 4, 5),
+    ]
+    assert current == data_root / "raw" / "gaia_background" / "current"
+
+    batch_paths = sorted((current / "batches").glob("*.csv"))
+
+    assert [path.name for path in batch_paths] == [
+        "gaia-background-0001.csv",
+        "gaia-background-0002.csv",
+        "gaia-background-0003.csv",
+    ]
+
+    metadata = json.loads((current / "snapshot.json").read_text(encoding="utf-8"))
+
+    assert metadata["source"] == "gaia_background"
+    assert metadata["fetched_online"] is True
+    assert [entry["path"] for entry in metadata["files"]] == [
+        "batches/gaia-background-0001.csv",
+        "batches/gaia-background-0002.csv",
+        "batches/gaia-background-0003.csv",
+    ]
+
+
 def test_refresh_gaia_hosts_preserves_current_snapshot_when_a_batch_fails(
     data_root: Path, monkeypatch: pytest.MonkeyPatch
 ):
@@ -138,6 +201,39 @@ def test_refresh_gaia_hosts_preserves_current_snapshot_when_a_batch_fails(
 
     with pytest.raises(RuntimeError, match="simulated Gaia failure"):
         gaia_flow.refresh_gaia_hosts()
+
+    assert marker.read_text(encoding="utf-8") == "existing snapshot"
+    assert list(current.iterdir()) == [marker]
+
+
+def test_refresh_gaia_background_preserves_current_when_a_batch_fails(
+    data_root: Path, monkeypatch: pytest.MonkeyPatch
+):
+    override_settings(gaia_background_source_count=2, gaia_background_batch_size=1)
+
+    current = data_root / "raw" / "gaia_background" / "current"
+    current.mkdir(parents=True)
+    marker = current / "existing.csv"
+    marker.write_text("existing snapshot", encoding="utf-8")
+
+    def failing_download(batch: GaiaBackgroundBatch, destination: Path) -> GaiaBatchDownload:
+        if batch.batch_number == 2:
+            raise RuntimeError("simulated Gaia background failure")
+
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        destination.write_text(
+            "source_id\n7\n",
+            encoding="utf-8",
+        )
+
+        return GaiaBatchDownload(
+            batch_number=batch.batch_number, job_id=f"job-{batch.batch_number}", path=destination
+        )
+
+    monkeypatch.setattr(gaia_flow, "download_gaia_background_batch", failing_download)
+
+    with pytest.raises(RuntimeError, match="simulated Gaia background failure"):
+        gaia_flow.refresh_gaia_background()
 
     assert marker.read_text(encoding="utf-8") == "existing snapshot"
     assert list(current.iterdir()) == [marker]

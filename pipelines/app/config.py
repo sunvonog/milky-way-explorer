@@ -31,6 +31,9 @@ class Settings(BaseSettings):
     log_retention: int = 20
     strict_checks: bool = False
 
+    gaia_background_source_count: int = Field(default=10_000, gt=0)
+    gaia_background_batch_size: int = Field(default=10_000, gt=0)
+
     @property
     def raw_root(self) -> Path:
         return self.data_root / "raw"
