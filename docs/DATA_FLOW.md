@@ -22,7 +22,7 @@ flowchart TD
     Static[(Arrow and JSON)]
     Parquet[(Parquet)]
     API[FastAPI]
-    Web[Vue WebGL frontend]
+    Web[Vue frontend]
 
     NASA --> ExoIngest
     ExoIngest --> HostIDs
@@ -42,6 +42,9 @@ flowchart TD
     Parquet --> API
     API --> Web
 ```
+
+The current browser prototype is a Vue SVG + D3 host scatter plot. WebGL /
+deck.gl rendering remains the planned public MVP path.
 
 ## 2. Exoplanet-first ingestion
 
@@ -421,7 +424,33 @@ The last valid build remains active if a new build fails.
 
 ## 11. Runtime frontend flow
 
-### Initial load
+### Current prototype (implemented)
+
+Local development publishes `data/frontend/exoplanet_hosts.arrow` from the
+pipelines visualization flow. FastAPI serves that file at
+`/data/exoplanet_hosts.arrow`. The Vue app fetches it via `VITE_DATA_BASE_URL`,
+validates each row, builds a pure D3 plot model, and renders SVG circles.
+
+```mermaid
+sequenceDiagram
+    participant B as Browser
+    participant A as FastAPI
+    participant F as Frontend data layer
+    participant V as Visualization model
+
+    B->>A: GET /data/exoplanet_hosts.arrow
+    A-->>B: Arrow IPC bytes
+    B->>F: decodeHostVisualization
+    F-->>B: HostVisualizationRecord list
+    B->>V: buildHostScatterPlotModel
+    V-->>B: Screen positions, ticks, radii
+    B->>B: Render Vue-managed SVG
+```
+
+Hosts without an accepted distance or exact Gaia source remain in the payload
+but are omitted from the selected spatial view.
+
+### Target MVP load (planned)
 
 ```mermaid
 sequenceDiagram
@@ -432,12 +461,12 @@ sequenceDiagram
     S-->>B: Current build metadata
     B->>S: GET milky-way-density.arrow
     S-->>B: Density cells
-    B->>S: GET exoplanet-hosts.arrow
+    B->>S: GET exoplanet_hosts.arrow
     S-->>B: Named host render records
     B->>B: Upload numeric attributes to GPU
 ```
 
-### Source selection
+### Source selection (planned)
 
 ```mermaid
 sequenceDiagram
@@ -459,10 +488,11 @@ sequenceDiagram
 
 ### Browser
 
-- immutable Arrow files cached by build ID;
+- immutable Arrow files cached by build ID (planned; the prototype fetches a
+  single development artifact);
 - selected details cached in memory;
 - stale requests aborted;
-- old GPU buffers released after view changes.
+- old GPU buffers released after view changes (planned WebGL path).
 
 ### Reverse proxy
 

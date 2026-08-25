@@ -497,24 +497,49 @@ weighted_brightness
 mean_bp_rp
 ```
 
-### 12.2 Exoplanet-host Arrow
+### 12.2 Exoplanet-host Arrow (`exoplanet_hosts.arrow`)
+
+Published by the pipelines visualization flow to `data/frontend/exoplanet_hosts.arrow`
+and served in local development at `/data/exoplanet_hosts.arrow`. One row per
+NASA exoplanet host, joined with system counts and exact Gaia spatial fields
+when available.
 
 ```text
-gaia_source_id
-host_index
-name_index
-heliocentric_x_pc
-heliocentric_y_pc
-galactocentric_x_kpc
-galactocentric_y_kpc
-g_magnitude
-bp_rp
-render_radius
-planet_count
-flags
+host_id                            string
+host_name                          string
+gaia_source_id                     int64 nullable
+planet_count                       int16
+archive_planet_count               int16
+planet_count_matches_archive       bool
+is_circumbinary                    bool
+position_status                    string
+distance_pc                        float64 nullable
+distance_method                    string nullable
+distance_quality                   string nullable
+heliocentric_x_pc                  float64 nullable
+heliocentric_y_pc                  float64 nullable
+heliocentric_z_pc                  float64 nullable
+galactocentric_x_kpc               float64 nullable
+galactocentric_y_kpc               float64 nullable
+galactocentric_z_kpc               float64 nullable
+phot_g_mean_magnitude              float64 nullable
+bp_rp_color                        float64 nullable
 ```
 
-### 12.3 Names Arrow or JSON
+`position_status` is one of `available`, `no_accepted_distance`, or
+`no_exact_gaia_source`. Spatial columns are null when no accepted distance or
+exact Gaia source exists; the host row is still published.
+
+Frontend decoding notes:
+
+- `gaia_source_id` is an Arrow Int64. The browser stores it as a string because
+  Gaia IDs exceed JavaScript's safe integer range.
+- Complete x/y/z triples are either all present or all null for each coordinate
+  frame.
+- Display names currently travel as `host_name` on the same row. A separate
+  name-index table remains planned for denser future render files.
+
+### 12.3 Names Arrow or JSON (planned)
 
 ```text
 name_index

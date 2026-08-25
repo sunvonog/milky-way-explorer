@@ -1,164 +1,31 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { format, scaleLinear, scaleSqrt } from 'd3'
-import {
-  SUN_GALACTOCENTRIC_R_KPC,
-  SUN_GALACTOCENTRIC_X_KPC,
-  SUN_GALACTOCENTRIC_Z_KPC,
-} from '@/lib/coords'
 
-import type { CartesianPosition, HostVisualizationRecord } from '@/data/hostVisualization'
+import type { HostVisualizationRecord } from '@/domain/host'
+import {
+  buildHostScatterPlotModel,
+  hostScatterPlotLayout,
+} from '@/visualization/hostScatterPlotModel'
+
+import {
+  coordinateFrameIds,
+  coordinateFrames,
+  type CoordinateFrameId,
+} from '@/domain/coordinateFrames'
 
 interface Props {
   records: HostVisualizationRecord[]
 }
 
-interface CoordinateFramePresentation {
-  label: string
-  unit: string
-  description: string
-  positionField: PositionField
-  sunPosition: PlotPosition
-  galacticCentrePosition: PlotPosition
-}
-
-interface PlotPosition {
-  x: number
-  y: number
-  z: number
-}
-
-type CoordinateFrame = 'heliocentric' | 'galactocentric'
-
-type PositionField = 'heliocentricPc' | 'galactocentricKpc'
-
-type PositionedHost = {
-  record: HostVisualizationRecord
-  position: CartesianPosition
-}
-
 const props = defineProps<Props>()
 
-const selectedFrame = ref<CoordinateFrame>('heliocentric')
+const selectedFrame = ref<CoordinateFrameId>('heliocentric')
 
 const selectedFramePresentation = computed(() => coordinateFrames[selectedFrame.value])
 
-const width = 800
-const height = 600
+const { width, height, margin, plotWidth, plotHeight } = hostScatterPlotLayout
 
-const margin = {
-  top: 32,
-  right: 24,
-  bottom: 64,
-  left: 72,
-}
-
-const plotWidth = width - margin.left - margin.right
-const plotHeight = height - margin.top - margin.bottom
-
-const positionedRecords = computed<PositionedHost[]>(() => {
-  const positionField = selectedFramePresentation.value.positionField
-
-  return props.records.reduce<PositionedHost[]>((result, record) => {
-    const position = record[positionField]
-
-    if (position !== null) {
-      result.push({ record, position })
-    }
-
-    return result
-  }, [])
-})
-
-const coordinateFrames: Record<CoordinateFrame, CoordinateFramePresentation> = {
-  heliocentric: {
-    label: 'Heliocentric',
-    unit: 'pc',
-    description: 'Top-down Cartesian view centred on the Sun.',
-    positionField: 'heliocentricPc',
-    sunPosition: { x: 0, y: 0, z: 0 },
-    galacticCentrePosition: {
-      x: SUN_GALACTOCENTRIC_R_KPC * 1000,
-      y: 0,
-      z: 0,
-    },
-  },
-  galactocentric: {
-    label: 'Galactocentric',
-    unit: 'kpc',
-    description: 'Top-down Cartesian view centred on the Milky Way centre.',
-    positionField: 'galactocentricKpc',
-    sunPosition: {
-      x: SUN_GALACTOCENTRIC_X_KPC,
-      y: 0,
-      z: SUN_GALACTOCENTRIC_Z_KPC,
-    },
-    galacticCentrePosition: { x: 0, y: 0, z: 0 },
-  },
-}
-
-const coordinateFrameOptions: readonly CoordinateFrame[] = ['heliocentric', 'galactocentric']
-
-const plot = computed(() => {
-  const { sunPosition, galacticCentrePosition } = selectedFramePresentation.value
-  // Include both reference points so they remain visible
-  const xValues = [
-    sunPosition.x,
-    galacticCentrePosition.x,
-    ...positionedRecords.value.map(({ position }) => position.x),
-  ]
-  const yValues = [
-    sunPosition.y,
-    galacticCentrePosition.y,
-    ...positionedRecords.value.map(({ position }) => position.y),
-  ]
-
-  const xMinimum = Math.min(...xValues)
-  const xMaximum = Math.max(...xValues)
-  const yMinimum = Math.min(...yValues)
-  const yMaximum = Math.max(...yValues)
-
-  const xSpan = xMaximum - xMinimum
-  const ySpan = yMaximum - yMinimum
-
-  /*
-   * Select one physical-units-per-pixel value for both axes.
-   * This prevents spatial shapes from being visually distorted.
-   */
-  const unitsPerPixel =
-    Math.max(xSpan / plotWidth, ySpan / plotHeight, 1 / Math.min(plotWidth, plotHeight)) * 1.08
-
-  const xCentre = (xMinimum + xMaximum) / 2
-  const yCentre = (yMinimum + yMaximum) / 2
-
-  const xHalfSpan = (unitsPerPixel * plotWidth) / 2
-  const yHalfSpan = (unitsPerPixel * plotHeight) / 2
-
-  const xScale = scaleLinear()
-    .domain([xCentre - xHalfSpan, xCentre + xHalfSpan])
-    .range([margin.left, width - margin.right])
-
-  const yScale = scaleLinear()
-    .domain([yCentre - yHalfSpan, yCentre + yHalfSpan])
-    .range([height - margin.bottom, margin.top])
-
-  const largestPlanetCount = Math.max(
-    1,
-    ...positionedRecords.value.map(({ record }) => record.planetCount),
-  )
-
-  const radiusScale = scaleSqrt().domain([1, largestPlanetCount]).range([3, 9]).clamp(true)
-
-  return {
-    xScale,
-    yScale,
-    radiusScale,
-    xTicks: xScale.ticks(6),
-    yTicks: yScale.ticks(6),
-  }
-})
-
-const formatTick = format('~s')
+const plot = computed(() => buildHostScatterPlotModel(props.records, selectedFrame.value))
 
 const hostPointClass = 'stroke-slate-50 opacity-75 [stroke-width:0.6]'
 
@@ -179,7 +46,7 @@ function pointClass(record: HostVisualizationRecord): string {
         >
 
         <span class="text-sm text-slate-400">
-          {{ positionedRecords.length }} of {{ records.length }} hosts positioned
+          {{ plot.hostPoints.length }} of {{ records.length }} hosts positioned
         </span>
       </div>
 
@@ -189,7 +56,7 @@ function pointClass(record: HostVisualizationRecord): string {
         aria-label="Coordinate frame"
       >
         <button
-          v-for="frameId in coordinateFrameOptions"
+          v-for="frameId in coordinateFrameIds"
           :key="frameId"
           type="button"
           :data-coordinate-frame="frameId"
@@ -229,47 +96,49 @@ function pointClass(record: HostVisualizationRecord): string {
         :height="plotHeight"
       />
 
-      <g v-for="tick in plot.xTicks" :key="`x-${tick}`">
+      <g v-for="tick in plot.xTicks" :key="`x-${tick.value}`">
         <line
+          data-x-grid-line
           class="stroke-slate-800 stroke-1"
-          :x1="plot.xScale(tick)"
-          :x2="plot.xScale(tick)"
+          :x1="tick.pixel"
+          :x2="tick.pixel"
           :y1="margin.top"
           :y2="height - margin.bottom"
         />
         <text
           class="fill-slate-300 text-xs"
           text-anchor="middle"
-          :x="plot.xScale(tick)"
+          :x="tick.pixel"
           :y="height - margin.bottom + 22"
         >
-          {{ formatTick(tick) }}
+          {{ tick.label }}
         </text>
       </g>
 
-      <g v-for="tick in plot.yTicks" :key="`y-${tick}`">
+      <g v-for="tick in plot.yTicks" :key="`y-${tick.value}`">
         <line
+          data-y-grid-line
           class="stroke-slate-800 stroke-1"
           :x1="margin.left"
           :x2="width - margin.right"
-          :y1="plot.yScale(tick)"
-          :y2="plot.yScale(tick)"
+          :y1="tick.pixel"
+          :y2="tick.pixel"
         />
         <text
           class="fill-slate-300 text-xs"
           text-anchor="end"
           dominant-baseline="middle"
           :x="margin.left - 10"
-          :y="plot.yScale(tick)"
+          :y="tick.pixel"
         >
-          {{ formatTick(tick) }}
+          {{ tick.label }}
         </text>
       </g>
 
       <line
         class="stroke-slate-500 stroke-[1.25]"
-        :x1="plot.xScale(0)"
-        :x2="plot.xScale(0)"
+        :x1="plot.axisOrigin.x"
+        :x2="plot.axisOrigin.x"
         :y1="margin.top"
         :y2="height - margin.bottom"
       />
@@ -277,24 +146,24 @@ function pointClass(record: HostVisualizationRecord): string {
         class="stroke-slate-500 stroke-[1.25]"
         :x1="margin.left"
         :x2="width - margin.right"
-        :y1="plot.yScale(0)"
-        :y2="plot.yScale(0)"
+        :y1="plot.axisOrigin.y"
+        :y2="plot.axisOrigin.y"
       />
 
       <circle
-        v-for="positionedHost in positionedRecords"
-        :key="positionedHost.record.hostId"
+        v-for="hostPoint in plot.hostPoints"
+        :key="hostPoint.record.hostId"
         data-host-point
-        :data-host-id="positionedHost.record.hostId"
-        :class="pointClass(positionedHost.record)"
-        :cx="plot.xScale(positionedHost.position.x)"
-        :cy="plot.yScale(positionedHost.position.y)"
-        :r="plot.radiusScale(positionedHost.record.planetCount)"
+        :data-host-id="hostPoint.record.hostId"
+        :class="pointClass(hostPoint.record)"
+        :cx="hostPoint.x"
+        :cy="hostPoint.y"
+        :r="hostPoint.radius"
       >
         <title>
-          {{ positionedHost.record.hostName }}:
-          {{ positionedHost.record.planetCount }}
-          {{ positionedHost.record.planetCount === 1 ? 'planet' : 'planets' }}
+          {{ hostPoint.record.hostName }}:
+          {{ hostPoint.record.planetCount }}
+          {{ hostPoint.record.planetCount === 1 ? 'planet' : 'planets' }}
         </title>
       </circle>
 
@@ -302,8 +171,8 @@ function pointClass(record: HostVisualizationRecord): string {
         data-sun-reference
         :data-sun-origin="selectedFrame === 'heliocentric' ? '' : undefined"
         class="fill-yellow-300 stroke-yellow-100 stroke-2"
-        :cx="plot.xScale(selectedFramePresentation.sunPosition.x)"
-        :cy="plot.yScale(selectedFramePresentation.sunPosition.y)"
+        :cx="plot.sun.x"
+        :cy="plot.sun.y"
         r="5"
       >
         <title>
@@ -317,8 +186,8 @@ function pointClass(record: HostVisualizationRecord): string {
         data-galactic-centre-reference
         :data-galactic-centre-origin="selectedFrame === 'galactocentric' ? '' : undefined"
         class="fill-fuchsia-300 stroke-fuchsia-100 stroke-2"
-        :cx="plot.xScale(selectedFramePresentation.galacticCentrePosition.x)"
-        :cy="plot.yScale(selectedFramePresentation.galacticCentrePosition.y)"
+        :cx="plot.galacticCentre.x"
+        :cy="plot.galacticCentre.y"
         r="5"
       >
         <title>
