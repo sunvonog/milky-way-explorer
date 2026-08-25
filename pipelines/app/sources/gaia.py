@@ -51,6 +51,20 @@ GAIA_HOST_COLUMNS = (
     "distance_gspphot_upper",
 )
 
+GAIA_BACKGROUND_COLUMNS = (
+    "source_id",
+    "ra",
+    "dec",
+    "l",
+    "b",
+    "parallax",
+    "parallax_over_error",
+    "phot_g_mean_mag",
+    "bp_rp",
+    "ruwe",
+    "distance_gspphot",
+)
+
 
 class GaiaArchiveJob(Protocol):
     jobid: str
