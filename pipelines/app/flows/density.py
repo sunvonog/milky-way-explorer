@@ -6,9 +6,9 @@ from pathlib import Path
 
 import polars as pl
 
-from app.artifacts import GAIA_DENSITY_CELLS_FILENAME
+from app.artifacts import GAIA_DENSITY_CELLS_FILENAME, GAIA_DENSITY_VISUALIZATION_FILENAME
 from app.config import get_settings
-from app.domain.density import build_gaia_density_grid
+from app.domain.density import build_gaia_density_grid, build_gaia_density_visualization_records
 from app.domain.gaia import build_gaia_background_sources
 from app.loaders import gaia_background as gaia_background_loader
 from app.runtime.flow import flow, task
@@ -57,12 +57,31 @@ def build_gaia_density_tables(sources: pl.DataFrame) -> pl.DataFrame:
     return cells
 
 
+@task(name="build_gaia_density_visualization")
+def build_gaia_density_visualization_table(cells: pl.DataFrame) -> pl.DataFrame:
+    settings = get_settings()
+    return build_gaia_density_visualization_records(
+        cells, extent_kpc=settings.gaia_density_extent_kpc
+    )
+
+
 @task(name="write_gaia_density_cells")
 def write_gaia_density_cells(cells: pl.DataFrame) -> Path:
     output = get_settings().processed_root / GAIA_DENSITY_CELLS_FILENAME
 
     output.parent.mkdir(parents=True, exist_ok=True)
     cells.write_parquet(output)
+
+    return output
+
+
+@task(name="write_gaia_density_visualization")
+def write_gaia_density_visualization(records: pl.DataFrame) -> Path:
+    settings = get_settings()
+    output = settings.data_root / "frontend" / GAIA_DENSITY_VISUALIZATION_FILENAME
+
+    output.parent.mkdir(parents=True, exist_ok=True)
+    records.write_ipc(output, compression="uncompressed")
 
     return output
 
@@ -75,4 +94,9 @@ def build_gaia_density() -> Path:
     sources = build_gaia_background_source_table(staging)
     cells = build_gaia_density_tables(sources)
 
-    return write_gaia_density_cells(cells)
+    cells_path = write_gaia_density_cells(cells)
+
+    visualization = build_gaia_density_visualization_table(cells)
+    write_gaia_density_visualization(visualization)
+
+    return cells_path

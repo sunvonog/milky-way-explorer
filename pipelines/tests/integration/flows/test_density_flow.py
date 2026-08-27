@@ -4,9 +4,9 @@ from pathlib import Path
 import polars as pl
 import pytest
 
-from app.artifacts import GAIA_DENSITY_CELLS_FILENAME
+from app.artifacts import GAIA_DENSITY_CELLS_FILENAME, GAIA_DENSITY_VISUALIZATION_FILENAME
 from app.config import override_settings, reset_settings
-from app.domain.density import DENSITY_COLUMNS
+from app.domain.density import DENSITY_COLUMNS, DENSITY_VISUALIZATION_COLUMNS
 from app.flows.density import build_gaia_density
 from app.sources.gaia import GAIA_BACKGROUND_COLUMNS
 
@@ -88,6 +88,16 @@ def test_build_gaia_density_publishes_all_configured_grid(data_root: Path):
     totals = dict(cells.group_by("grid_level").agg(pl.col("source_count").sum()).iter_rows())
 
     assert totals == {2: 2, 4: 2}
+
+    visualization_path = data_root / "frontend" / GAIA_DENSITY_VISUALIZATION_FILENAME
+
+    assert visualization_path.is_file()
+
+    visualization = pl.read_ipc(visualization_path)
+
+    assert visualization.columns == list(DENSITY_VISUALIZATION_COLUMNS)
+    assert visualization["grid_level"].unique().sort().to_list() == [2, 4]
+    assert visualization["cell_size_kpc"].unique().sort().to_list() == [10.0, 20.0]
 
 
 def test_build_gaia_density_requires_committed_snapshot(data_root: Path):

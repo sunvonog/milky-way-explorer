@@ -13,6 +13,18 @@ DENSITY_COLUMNS = (
     "mean_bp_rp",
 )
 
+DENSITY_VISUALIZATION_COLUMNS = (
+    "grid_level",
+    "cell_x",
+    "cell_y",
+    "cell_center_x_kpc",
+    "cell_center_y_kpc",
+    "cell_size_kpc",
+    "source_count",
+    "weighted_brightness",
+    "mean_bp_rp",
+)
+
 
 def build_gaia_density_grid(
     sources: pl.DataFrame, *, grid_size: int, extent_kpc: float
@@ -78,4 +90,52 @@ def build_gaia_density_grid(
         .with_columns(pl.lit(grid_size, dtype=pl.UInt16).alias("grid_level"))
         .select(*DENSITY_COLUMNS)
         .sort("cell_x", "cell_y")
+    )
+
+
+def build_gaia_density_visualization_records(
+    cells: pl.DataFrame, *, extent_kpc: float
+) -> pl.DataFrame:
+    """Add physical Galactocentric geometry to density cells.
+
+    A square grid spanning ``[-extent_kpc, +extent_kpc]`` has cell size
+
+    ``cell_size = 2 * extent / grid_level``.
+
+    Cell indices refer to the lower-left grid origin, so the physical centre is
+
+    ``-extent + (cell_index + 0.5) * cell_size``.
+
+    Publishing this geometry keeps the frontend independent of pipeline
+    configuration and guarantees that the rendered axes remain in kiloparsecs.
+    """
+    if extent_kpc <= 0:
+        raise ValueError("extent_kpc must be positive.")
+
+    if cells.filter(pl.col("grid_level") == 0).height > 0:
+        raise ValueError("grid_level must be positive")
+
+    return (
+        cells.with_columns(
+            (pl.lit(2.0 * extent_kpc) / pl.col("grid_level"))
+            .cast(pl.Float32)
+            .alias("_cell_size_kpc")
+        )
+        .with_columns(
+            (
+                pl.lit(-extent_kpc)
+                + (pl.col("cell_x").cast(pl.Float32) + 0.5) * pl.col("_cell_size_kpc")
+            )
+            .cast(pl.Float32)
+            .alias("cell_center_x_kpc"),
+            (
+                pl.lit(-extent_kpc)
+                + (pl.col("cell_y").cast(pl.Float32) + 0.5) * pl.col("_cell_size_kpc")
+            )
+            .cast(pl.Float32)
+            .alias("cell_center_y_kpc"),
+            pl.col("_cell_size_kpc").alias("cell_size_kpc"),
+        )
+        .select(*DENSITY_VISUALIZATION_COLUMNS)
+        .sort("grid_level", "cell_x", "cell_y")
     )

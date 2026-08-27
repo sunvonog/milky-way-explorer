@@ -1,7 +1,12 @@
 import polars as pl
 import pytest
 
-from app.domain.density import DENSITY_COLUMNS, build_gaia_density_grid
+from app.domain.density import (
+    DENSITY_COLUMNS,
+    DENSITY_VISUALIZATION_COLUMNS,
+    build_gaia_density_grid,
+    build_gaia_density_visualization_records,
+)
 
 
 def test_aggregates_sources_into_non_empty_cell():
@@ -91,3 +96,37 @@ def test_rejects_non_positive_grid_size(grid_size: int):
 def test_rejects_non_positive_extent(extent_kpc: float):
     with pytest.raises(ValueError, match="extent_kpc must be positive"):
         build_gaia_density_grid(pl.DataFrame(), grid_size=128, extent_kpc=extent_kpc)
+
+
+def test_density_visualization_adds_physical_cell_geometry():
+    cells = pl.DataFrame(
+        {
+            "grid_level": [4, 4],
+            "cell_x": [0, 2],
+            "cell_y": [1, 3],
+            "source_count": [10, 20],
+            "weighted_brightness": [0.5, 1.0],
+            "mean_bp_rp": [0.8, None],
+        },
+        schema_overrides={
+            "grid_level": pl.UInt16,
+            "cell_x": pl.Int32,
+            "cell_y": pl.Int32,
+            "source_count": pl.UInt32,
+            "weighted_brightness": pl.Float32,
+            "mean_bp_rp": pl.Float32,
+        },
+    )
+
+    actual: pl.DataFrame = build_gaia_density_visualization_records(cells, extent_kpc=2.0)
+
+    assert actual.columns == list(DENSITY_VISUALIZATION_COLUMNS)
+
+    assert actual.select("cell_center_x_kpc", "cell_center_y_kpc", "cell_size_kpc").to_dicts() == [
+        {
+            "cell_center_x_kpc": -1.5,
+            "cell_center_y_kpc": -0.5,
+            "cell_size_kpc": 1.0,
+        },
+        {"cell_center_x_kpc": 0.5, "cell_center_y_kpc": 1.5, "cell_size_kpc": 1.0},
+    ]
