@@ -592,7 +592,7 @@ Example:
   "gaia_release": "DR3",
   "exoplanet_snapshot": "2026-07-24",
   "gaia_background_mode": "chunked_random_sample",
-  "gaia_background_source_count": 10000,
+  "gaia_background_source_count": 1000000,
   "matched_host_count": 0,
   "distance_policy_version": "1.0.0",
   "coordinate_pipeline_version": "1.0.0",

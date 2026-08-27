@@ -1,4 +1,4 @@
-"""Gaia host-enrichment workflows."""
+"""Gaia host-enrichment and background-retrieval workflows."""
 
 from __future__ import annotations
 
@@ -13,18 +13,32 @@ from app.artifacts import (
     GAIA_HOST_SOURCES_FILENAME,
 )
 from app.config import get_settings
-from app.domain.gaia import GaiaHostBatch, build_gaia_host_ids, plan_gaia_host_batches
+from app.domain.gaia import (
+    GaiaBackgroundBatch,
+    GaiaHostBatch,
+    build_gaia_host_ids,
+    plan_gaia_background_batches,
+    plan_gaia_host_batches,
+)
 from app.domain.gaia import build_gaia_host_sources as build_gaia_host_source_records
 from app.loaders import gaia as gaia_loader
 from app.runtime.checks import expect
 from app.runtime.flow import flow, task
-from app.sources.gaia import GaiaBatchDownload, download_gaia_host_batch
+from app.sources.gaia import (
+    GaiaBatchDownload,
+    download_gaia_background_batch,
+    download_gaia_host_batch,
+)
 from app.sources.snapshot import snapshot_dir, snapshot_directory
 
 GAIA_HOST_SOURCE = "gaia_hosts"
 GAIA_HOST_ORIGIN = "Gaia DR3 async TAP"
 GAIA_HOST_BATCH_SIZE = 500
 GAIA_HOST_BATCHES_DIRECTORY = "batches"
+
+GAIA_BACKGROUND_SOURCE = "gaia_background"
+GAIA_BACKGROUND_ORIGIN = "Gaia DR3 async TAP random-index subset"
+GAIA_BACKGROUND_BATCHES_DIRECTORY = "batches"
 
 EXPECTED_GAIA_HOST_IDS = 4396
 EXPECTED_GAIA_HOST_SOURCES = 4396
@@ -93,6 +107,16 @@ def plan_gaia_host_downloads(host_ids: pl.DataFrame) -> list[GaiaHostBatch]:
     return batches
 
 
+@task(name="plan_gaia_background_downloads")
+def plan_gaia_background_downloads() -> list[GaiaBackgroundBatch]:
+    settings = get_settings()
+
+    return plan_gaia_background_batches(
+        source_count=settings.gaia_background_source_count,
+        batch_size=settings.gaia_background_batch_size,
+    )
+
+
 @task(name="download_gaia_host_batch", key="batch_number")
 def fetch_gaia_host_batch(
     batch_number: int, source_ids: tuple[int, ...], staging_root: Path
@@ -101,6 +125,22 @@ def fetch_gaia_host_batch(
     destination = staging_root / GAIA_HOST_BATCHES_DIRECTORY / f"gaia-host-{batch_number:04d}.csv"
 
     return download_gaia_host_batch(batch, destination)
+
+
+@task(name="download_gaia_background_batch", key="batch_number")
+def fetch_gaia_background_batch(
+    batch_number: int, random_index_start: int, random_index_stop: int, staging_root: Path
+) -> GaiaBatchDownload:
+    batch = GaiaBackgroundBatch(
+        batch_number=batch_number,
+        random_index_start=random_index_start,
+        random_index_stop=random_index_stop,
+    )
+    destination = (
+        staging_root / GAIA_BACKGROUND_BATCHES_DIRECTORY / f"gaia-background-{batch_number:04d}.csv"
+    )
+
+    return download_gaia_background_batch(batch, destination)
 
 
 @flow(name="build-gaia-host-manifest")
@@ -191,5 +231,35 @@ def refresh_gaia_hosts() -> Path:
             GAIA_HOST_SOURCE,
             settings.raw_root,
             origin=GAIA_HOST_ORIGIN,
+            fetched_online=True,
+        )
+
+
+@flow(name="refresh-gaia-background")
+def refresh_gaia_background() -> Path:
+    """Download and atomically publish a repeatable Gaia background subset."""
+    batches = plan_gaia_background_downloads()
+
+    settings = get_settings()
+    settings.raw_root.mkdir(parents=True, exist_ok=True)
+
+    with TemporaryDirectory(
+        prefix=".gaia-background-refresh-", dir=settings.raw_root
+    ) as temporary_directory:
+        staging_root = Path(temporary_directory)
+
+        for batch in batches:
+            fetch_gaia_background_batch(
+                batch_number=batch.batch_number,
+                random_index_start=batch.random_index_start,
+                random_index_stop=batch.random_index_stop,
+                staging_root=staging_root,
+            )
+
+        return snapshot_directory(
+            staging_root,
+            GAIA_BACKGROUND_SOURCE,
+            settings.raw_root,
+            origin=GAIA_BACKGROUND_ORIGIN,
             fetched_online=True,
         )

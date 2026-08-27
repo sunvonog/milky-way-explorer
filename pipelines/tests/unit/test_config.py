@@ -47,3 +47,16 @@ def test_cli_override_settings():
     assert updated.strict_checks is True
     assert updated.log_level == "DEBUG"
     assert get_settings().strict_checks is True
+
+
+def test_gaia_background_retrieval_env_overrides(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    monkeypatch.setenv("MWE_GAIA_BACKGROUND_SOURCE_COUNT", "20000")
+    monkeypatch.setenv("MWE_GAIA_BACKGROUND_BATCH_SIZE", "2500")
+    reset_settings()
+
+    settings = get_settings()
+
+    assert settings.gaia_background_source_count == 20_000
+    assert settings.gaia_background_batch_size == 2500

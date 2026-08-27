@@ -2,12 +2,15 @@ from pathlib import Path
 
 import pytest
 
-from app.domain.gaia import GaiaHostBatch
+from app.domain.gaia import GaiaBackgroundBatch, GaiaHostBatch
 from app.sources.gaia import (
+    GAIA_BACKGROUND_COLUMNS,
     GAIA_HOST_COLUMNS,
     GAIA_SOURCE_TABLE,
     GaiaBatchDownload,
+    download_gaia_background_batch,
     download_gaia_host_batch,
+    gaia_background_query,
     gaia_host_query,
 )
 
@@ -193,3 +196,65 @@ def test_download_gaia_host_batch_reports_submission_response(tmp_path: Path):
     assert raised.value.__notes__ == ["Gaia TAP response: Gaia TAP service unavailable"]
     assert not destination.exists()
     assert not error_output.exists()
+
+
+def test_gaia_background_query_selects_exact_random_index_range():
+    batch = GaiaBackgroundBatch(
+        batch_number=2,
+        random_index_start=2_000,
+        random_index_stop=3_000,
+    )
+
+    query = gaia_background_query(batch)
+
+    assert (
+        query
+        == f"""SELECT {",".join(GAIA_BACKGROUND_COLUMNS)}
+FROM {GAIA_SOURCE_TABLE}
+WHERE random_index >= 2000
+AND random_index < 3000
+AND (
+    distance_gspphot > 0
+    OR (
+        parallax > 0
+        AND parallax_over_error >= 5
+        AND (
+            ruwe IS NULL
+            OR ruwe < 1.4
+        )
+    )
+)
+ORDER BY source_id"""
+    )
+
+
+@pytest.mark.parametrize(("start", "stop"), [(-1, 10), (10, 10), (11, 10)])
+def test_gaia_background_query_rejects_invalid_ranges(start: int, stop: int):
+    batch = GaiaBackgroundBatch(batch_number=1, random_index_start=start, random_index_stop=stop)
+
+    with pytest.raises(ValueError, match="random-index range"):
+        gaia_background_query(batch)
+
+
+def test_download_gaia_background_batch_uses_async_file_output(tmp_path: Path):
+    batch = GaiaBackgroundBatch(batch_number=2, random_index_start=2_000, random_index_stop=3_000)
+    destination = tmp_path / "gaia-background-0002.csv"
+    partial = tmp_path / ".gaia-background-0002.csv.part"
+    client = FakeGaiaClient()
+
+    result = download_gaia_background_batch(batch, destination, client=client)
+
+    assert result == GaiaBatchDownload(batch_number=2, job_id="fake-job-123", path=destination)
+    assert destination.is_file()
+    assert not partial.exists()
+
+    assert client.calls == [
+        {
+            "query": gaia_background_query(batch),
+            "output_file": str(partial),
+            "output_format": "csv",
+            "dump_to_file": True,
+            "background": False,
+            "verbose": True,
+        }
+    ]

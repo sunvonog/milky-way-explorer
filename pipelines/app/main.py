@@ -14,8 +14,14 @@ import argparse
 import sys
 
 from app.config import override_settings
+from app.flows.density import build_gaia_density
 from app.flows.exoplanets import build_exoplanets, refresh_pscomppars
-from app.flows.gaia import build_gaia_host_manifest, build_gaia_hosts, refresh_gaia_hosts
+from app.flows.gaia import (
+    build_gaia_host_manifest,
+    build_gaia_hosts,
+    refresh_gaia_background,
+    refresh_gaia_hosts,
+)
 from app.flows.identity import build_identity
 from app.flows.snapshots import refresh_snapshots
 from app.flows.visualization import build_host_visualization
@@ -42,7 +48,14 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "command",
         nargs="?",
         default="build",
-        choices=["build", "refresh-snapshots", "refresh-pscomppars", "refresh-gaia-hosts"],
+        choices=[
+            "build",
+            "refresh-snapshots",
+            "refresh-pscomppars",
+            "refresh-gaia-hosts",
+            "refresh-gaia-background",
+            "build-gaia-density",
+        ],
         help="pipeline to run (default: build)",
     )
     parser.add_argument(
@@ -84,6 +97,10 @@ def main(argv: list[str] | None = None) -> int:
             refresh_pscomppars()
         elif args.command == "refresh-gaia-hosts":
             refresh_gaia_hosts()
+        elif args.command == "refresh-gaia-background":
+            refresh_gaia_background()
+        elif args.command == "build-gaia-density":
+            build_gaia_density()
         else:
             canonical_build()
     except SystemExit as exc:

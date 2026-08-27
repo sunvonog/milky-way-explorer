@@ -3,72 +3,20 @@ import { tableFromIPC } from 'apache-arrow'
 const HOST_VISUALIZATION_FILENAME = 'exoplanet_hosts.arrow'
 
 import type { CartesianPosition } from '@/domain/coordinates'
+import {
+  nullableNumber,
+  nullableString,
+  requiredBoolean,
+  requiredNumber,
+  requiredString,
+  type ArrowRow,
+} from './arrowRow'
 import type {
   DistanceMethod,
   DistanceQuality,
   HostVisualizationRecord,
   PositionStatus,
 } from '@/domain/host'
-
-type ArrowRow = Record<string, unknown>
-
-function requiredString(row: ArrowRow, field: string): string {
-  const value = row[field]
-
-  if (typeof value !== 'string') {
-    throw new TypeError(`${field} must be a string`)
-  }
-
-  return value
-}
-
-function requiredNumber(row: ArrowRow, field: string): number {
-  const value = row[field]
-
-  if (typeof value !== 'number') {
-    throw new TypeError(`${field} must be a number`)
-  }
-
-  return value
-}
-
-function requiredBoolean(row: ArrowRow, field: string): boolean {
-  const value = row[field]
-
-  if (typeof value !== 'boolean') {
-    throw new TypeError(`${field} must be a boolean`)
-  }
-
-  return value
-}
-
-function nullableString(row: ArrowRow, field: string): string | null {
-  const value = row[field]
-
-  if (value === null) {
-    return null
-  }
-
-  if (typeof value !== 'string') {
-    throw new TypeError(`${field} must be a string or null`)
-  }
-
-  return value
-}
-
-function nullableNumber(row: ArrowRow, field: string): number | null {
-  const value = row[field]
-
-  if (value === null) {
-    return null
-  }
-
-  if (typeof value !== 'number') {
-    throw new TypeError(`${field} must be a number or null`)
-  }
-
-  return value
-}
 
 function nullableGaiaSourceId(row: ArrowRow, field: string): string | null {
   const value = row[field]
