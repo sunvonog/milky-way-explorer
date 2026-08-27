@@ -235,17 +235,26 @@ The background pipeline does not need readable names or full source details.
 
 Its purpose is to create density cells for the Milky Way overview.
 
-### 4.1 Initial validation input
+### 4.1 Exploratory Gaia input
 
-Use the already successful 10,000-source retrieval to validate:
+The initial 10,000-candidate retrieval produced 2,740 accepted sources
+across 334 occupied density cells. This validated the complete path from
+Gaia retrieval through the frontend visualization.
 
-- FITS/CSV parsing;
-- null handling;
-- distance selection;
-- Galactocentric transforms;
-- density binning;
-- Arrow export;
-- frontend appearance.
+The current repeatable sample scans 1,000,000 Gaia `random_index`
+candidates in ten batches of 100,000. After applying the distance policy,
+it produces:
+
+- 274,685 accepted sources;
+- 260,481 GSP-Phot distances;
+- 14,204 qualified inverse-parallax distances;
+- 274,681 sources inside the fixed density-grid extent;
+- 2,222 occupied cells in the 128 × 128 grid.
+
+This density represents the selected Gaia observations, not an unbiased
+estimate of the intrinsic Milky Way stellar density. Magnitude limits,
+extinction, crowding, distance availability, and quality filtering create
+a strong selection bias toward the solar neighbourhood.
 
 ### 4.2 Production retrieval
 

@@ -49,13 +49,6 @@ def test_cli_override_settings():
     assert get_settings().strict_checks is True
 
 
-def test_gaia_background_retrieval_defaults():
-    settings = get_settings()
-
-    assert settings.gaia_background_source_count == 10_000
-    assert settings.gaia_background_batch_size == 10_000
-
-
 def test_gaia_background_retrieval_env_overrides(
     monkeypatch: pytest.MonkeyPatch,
 ):

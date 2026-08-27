@@ -31,8 +31,8 @@ class Settings(BaseSettings):
     log_retention: int = 20
     strict_checks: bool = False
 
-    gaia_background_source_count: int = Field(default=10_000, gt=0)
-    gaia_background_batch_size: int = Field(default=10_000, gt=0)
+    gaia_background_source_count: int = Field(default=1_000_000, gt=0)
+    gaia_background_batch_size: int = Field(default=100_000, gt=0)
     gaia_density_grid_sizes: tuple[int, ...] = (128,)
     gaia_density_extent_kpc: float = Field(default=20.0, gt=0)
 
