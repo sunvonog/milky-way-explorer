@@ -53,19 +53,35 @@ class Settings(BaseSettings):
         return REPO_ROOT / "pipelines" / "_inputs"
 
 
+def _settings_with_overrides(overrides: dict[str, object]) -> Settings:
+    unknown_fields = sorted(
+        set(overrides) - set(Settings.model_fields),
+    )
+
+    if unknown_fields:
+        label = "setting override" if len(unknown_fields) == 1 else "setting overrides"
+        raise TypeError(f"unknown {label}: {', '.join(unknown_fields)}")
+
+    base = Settings()
+
+    return Settings.model_validate({**base.model_dump(), **overrides})
+
+
 @lru_cache
 def get_settings() -> Settings:
-    base = Settings()
-    if _cli_overrides:
-        return base.model_copy(update=_cli_overrides)
-    return base
+    return _settings_with_overrides(_cli_overrides)
 
 
 def override_settings(**kwargs: object) -> Settings:
-    """Apply CLI overrides on top of env / .env / defaults and refresh the cache."""
-    _cli_overrides.update(kwargs)
+    """Validate and apply CLI overrides on top of environment settings."""
+    candidate = {**_cli_overrides, **kwargs}
+    updated = _settings_with_overrides(candidate)
+
+    _cli_overrides.clear()
+    _cli_overrides.update(candidate)
     get_settings.cache_clear()
-    return get_settings()
+
+    return updated
 
 
 def reset_settings() -> None:
