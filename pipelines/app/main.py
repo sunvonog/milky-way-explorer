@@ -14,6 +14,7 @@ import argparse
 import sys
 
 from app.config import override_settings
+from app.flows.density import build_gaia_density
 from app.flows.exoplanets import build_exoplanets, refresh_pscomppars
 from app.flows.gaia import (
     build_gaia_host_manifest,
@@ -53,6 +54,7 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
             "refresh-pscomppars",
             "refresh-gaia-hosts",
             "refresh-gaia-background",
+            "build-gaia-density",
         ],
         help="pipeline to run (default: build)",
     )
@@ -97,6 +99,8 @@ def main(argv: list[str] | None = None) -> int:
             refresh_gaia_hosts()
         elif args.command == "refresh-gaia-background":
             refresh_gaia_background()
+        elif args.command == "build-gaia-density":
+            build_gaia_density()
         else:
             canonical_build()
     except SystemExit as exc:
