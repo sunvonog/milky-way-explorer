@@ -41,10 +41,11 @@ interface DensityCell {
   opacity: number
 }
 
-export interface gaiaDensityPlotModel {
+export interface GaiaDensityPlotModel {
   cells: DensityCell[]
   gridLevel: number
   extentKpc: number
+  sourceCount: number
   sun: ScreenPosition
   galacticCentre: ScreenPosition
   xTicks: AxisTick[]
@@ -53,10 +54,20 @@ export interface gaiaDensityPlotModel {
 
 const formatTick = format('~s')
 
+export function selectHighestGaiaDensityGridLevel(
+  records: readonly DensityVisualizationRecord[],
+): number | null {
+  if (records.length === 0) {
+    return null
+  }
+
+  return Math.max(...records.map((record) => record.gridLevel))
+}
+
 export function buildGaiaDensityPlotModel(
   records: readonly DensityVisualizationRecord[],
   gridLevel: number,
-): gaiaDensityPlotModel {
+): GaiaDensityPlotModel {
   const selectedRecords = records.filter((record) => record.gridLevel === gridLevel)
 
   if (selectedRecords.length === 0) {
@@ -116,6 +127,7 @@ export function buildGaiaDensityPlotModel(
     }),
     gridLevel,
     extentKpc,
+    sourceCount: selectedRecords.reduce((total, record) => total + record.sourceCount, 0),
     sun: project(galactocentricFrame.sunPosition.x, galactocentricFrame.sunPosition.y),
     galacticCentre: project(
       galactocentricFrame.galacticCentrePosition.x,

@@ -1,7 +1,11 @@
 import { describe, expect, it } from 'vitest'
 
 import type { DensityVisualizationRecord } from '@/domain/density'
-import { buildGaiaDensityPlotModel, gaiaDensityPlotLayout } from './gaiaDensityPlotModel'
+import {
+  buildGaiaDensityPlotModel,
+  gaiaDensityPlotLayout,
+  selectHighestGaiaDensityGridLevel,
+} from './gaiaDensityPlotModel'
 
 function densityCell(
   overrides: Partial<DensityVisualizationRecord> = {},
@@ -78,5 +82,33 @@ describe('buildGaiaDensityPlotModel', () => {
 
     expect(model.galacticCentre.x).toBeCloseTo(margin.left + plotWidth / 2)
     expect(model.galacticCentre.y).toBeCloseTo(margin.top + plotHeight / 2)
+  })
+
+  it('selects the highest available grid level', () => {
+    expect(
+      selectHighestGaiaDensityGridLevel([
+        densityCell({ gridLevel: 4 }),
+        densityCell({ gridLevel: 16 }),
+        densityCell({ gridLevel: 8 }),
+      ]),
+    ).toBe(16)
+
+    expect(selectHighestGaiaDensityGridLevel([])).toBeNull()
+  })
+
+  it('aggregates source counts for the selected grid level', () => {
+    const model = buildGaiaDensityPlotModel(
+      [
+        densityCell({ sourceCount: 1 }),
+        densityCell({
+          cellX: 1,
+          cellCenterXKpc: -0.5,
+          sourceCount: 16,
+        }),
+      ],
+      4,
+    )
+
+    expect(model.sourceCount).toBe(17)
   })
 })
