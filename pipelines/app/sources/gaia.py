@@ -115,13 +115,22 @@ def gaia_background_query(batch: GaiaBackgroundBatch) -> str:
 
     columns = ",".join(GAIA_BACKGROUND_COLUMNS)
 
-    return (
-        f"SELECT {columns} "
-        f"FROM {GAIA_SOURCE_TABLE} "
-        f"WHERE random_index >= {batch.random_index_start} "
-        f"AND random_index < {batch.random_index_stop} "
-        "ORDER BY source_id"
+    return f"""SELECT {columns}
+FROM {GAIA_SOURCE_TABLE}
+WHERE random_index >= {batch.random_index_start}
+AND random_index < {batch.random_index_stop}
+AND (
+    distance_gspphot > 0
+    OR (
+        parallax > 0
+        AND parallax_over_error >= 5
+        AND (
+            ruwe IS NULL
+            OR ruwe < 1.4
+        )
     )
+)
+ORDER BY source_id"""
 
 
 def _default_client() -> GaiaArchiveClient:

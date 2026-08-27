@@ -207,12 +207,24 @@ def test_gaia_background_query_selects_exact_random_index_range():
 
     query = gaia_background_query(batch)
 
-    assert query == (
-        f"SELECT {','.join(GAIA_BACKGROUND_COLUMNS)} "
-        f"FROM {GAIA_SOURCE_TABLE} "
-        "WHERE random_index >= 2000 "
-        "AND random_index < 3000 "
-        "ORDER BY source_id"
+    assert (
+        query
+        == f"""SELECT {",".join(GAIA_BACKGROUND_COLUMNS)}
+FROM {GAIA_SOURCE_TABLE}
+WHERE random_index >= 2000
+AND random_index < 3000
+AND (
+    distance_gspphot > 0
+    OR (
+        parallax > 0
+        AND parallax_over_error >= 5
+        AND (
+            ruwe IS NULL
+            OR ruwe < 1.4
+        )
+    )
+)
+ORDER BY source_id"""
     )
 
 
