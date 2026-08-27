@@ -55,7 +55,7 @@ def _write_gaia_manifest(data_root: Path, source_ids: list[int]) -> Path:
     return path
 
 
-def test_build_gaia_host_manifest_publishes_distinct_ids(data_root: Path):
+def test_build_gaia_host_manifest_publishes_distinct_ids(data_root: Path) -> None:
     path = build_gaia_host_manifest()
 
     assert path == data_root / "processed" / GAIA_HOST_IDS_FILENAME
@@ -70,7 +70,9 @@ def test_build_gaia_host_manifest_publishes_distinct_ids(data_root: Path):
     assert host_ids["gaia_source_id"].is_sorted()
 
 
-def test_refresh_gaia_hosts_publishes_all_batches(data_root: Path, monkeypatch: pytest.MonkeyPatch):
+def test_refresh_gaia_hosts_publishes_all_batches(
+    data_root: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     _write_gaia_manifest(data_root, [7, 10, 20, 30, 42])
 
     monkeypatch.setattr(gaia_flow, "GAIA_HOST_BATCH_SIZE", 2)
@@ -113,7 +115,7 @@ def test_refresh_gaia_hosts_publishes_all_batches(data_root: Path, monkeypatch: 
 
 def test_refresh_gaia_background_publishes_all_batches(
     data_root: Path, monkeypatch: pytest.MonkeyPatch
-):
+) -> None:
     override_settings(
         gaia_background_source_count=5,
         gaia_background_batch_size=2,
@@ -176,7 +178,7 @@ def test_refresh_gaia_background_publishes_all_batches(
 
 def test_refresh_gaia_hosts_preserves_current_snapshot_when_a_batch_fails(
     data_root: Path, monkeypatch: pytest.MonkeyPatch
-):
+) -> None:
     _write_gaia_manifest(data_root, [7, 42])
 
     current = data_root / "raw" / "gaia_hosts" / "current"
@@ -208,7 +210,7 @@ def test_refresh_gaia_hosts_preserves_current_snapshot_when_a_batch_fails(
 
 def test_refresh_gaia_background_preserves_current_when_a_batch_fails(
     data_root: Path, monkeypatch: pytest.MonkeyPatch
-):
+) -> None:
     override_settings(gaia_background_source_count=2, gaia_background_batch_size=1)
 
     current = data_root / "raw" / "gaia_background" / "current"
@@ -239,7 +241,7 @@ def test_refresh_gaia_background_preserves_current_when_a_batch_fails(
     assert list(current.iterdir()) == [marker]
 
 
-def test_build_gaia_hosts_publishes_source_table(data_root: Path):
+def test_build_gaia_hosts_publishes_source_table(data_root: Path) -> None:
     snapshot = data_root / "raw" / "gaia_hosts" / "current"
     shutil.copytree(GAIA_HOST_SNAPSHOT, snapshot)
 
@@ -258,6 +260,6 @@ def test_build_gaia_hosts_publishes_source_table(data_root: Path):
     assert method_counts == {"gaia_gspphot": 3887, "inverse_parallax": 400, "unavailable": 109}
 
 
-def test_build_gaia_hosts_requires_committed_snapshot(data_root: Path):
+def test_build_gaia_hosts_requires_committed_snapshot(data_root: Path) -> None:
     with pytest.raises(FileNotFoundError, match="Gaia host snapshot"):
         gaia_flow.build_gaia_hosts()

@@ -66,7 +66,7 @@ def extract_gaia_host_ids(hosts: pl.DataFrame) -> pl.DataFrame:
 
 
 @task(name="check_gaia_host_ids")
-def check_gaia_host_ids(host_ids: pl.DataFrame):
+def check_gaia_host_ids(host_ids: pl.DataFrame) -> None:
     expect(
         "gaia_host_ids",
         host_ids.height,
@@ -175,7 +175,7 @@ def build_gaia_host_source_table(staging: pl.DataFrame) -> pl.DataFrame:
 
 
 @task(name="check_gaia_host_sources")
-def check_gaia_host_sources(sources: pl.DataFrame):
+def check_gaia_host_sources(sources: pl.DataFrame) -> None:
     expect("gaia_host_sources", sources.height, EXPECTED_GAIA_HOST_SOURCES)
 
     unavailable = sources.filter(pl.col("distance_method") == "unavailable").height

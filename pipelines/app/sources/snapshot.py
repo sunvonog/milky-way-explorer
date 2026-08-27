@@ -46,7 +46,7 @@ def snapshot_dir(raw_root: Path, source: str) -> Path:
     return raw_root / source / CURRENT
 
 
-def _promote_current(staged: Path, destination: Path):
+def _promote_current(staged: Path, destination: Path) -> None:
     """Replace the current directory while retaining rollback on failure."""
     previous: Path | None = None
 

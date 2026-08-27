@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Iterator
 from pathlib import Path
 
 import pytest
@@ -13,14 +14,14 @@ from app.runtime.logging import bound_log, setup_logging, teardown_logging
 
 
 @pytest.fixture(autouse=True)
-def _clean_settings(tmp_path: Path):
+def _clean_settings(tmp_path: Path) -> Iterator[None]:
     reset_settings()
     override_settings(log_dir=tmp_path / "logs", log_level="DEBUG", log_color=False)
     yield
     reset_settings()
 
 
-def test_setup_logging_writes_jsonl(tmp_path: Path):
+def test_setup_logging_writes_jsonl(tmp_path: Path) -> None:
     path = setup_logging(flow_name="demo", run_id="abc123")
     assert path == tmp_path / "logs" / "demo" / "abc123.jsonl"
     bound_log(run_id="abc123", flow="demo", task="t1", rows=3).info("hello")
@@ -37,7 +38,7 @@ def test_setup_logging_writes_jsonl(tmp_path: Path):
     assert record["extra"]["rows"] == "3"  # logly stringifies bound values
 
 
-def test_flow_binds_run_id_on_records(tmp_path: Path):
+def test_flow_binds_run_id_on_records(tmp_path: Path) -> None:
     @task(name="step")
     def step() -> None:
         bound_log(run_id="ignored", flow="x", task="step", marker="yes").info("inside")

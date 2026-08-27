@@ -66,7 +66,7 @@ def _faints_row(
     }
 
 
-def test_faints_only_hip_does_not_double_prefix():
+def test_faints_only_hip_does_not_double_prefix() -> None:
     """Latent Bug 1: coalesced Faints HIP must become 'HIP nnnn', never 'HIP HIP nnnn'."""
     csn = pl.DataFrame([_csn_row(hip=None)])
     faints = pl.DataFrame([_faints_row(hip="1547")])
@@ -80,7 +80,7 @@ def test_faints_only_hip_does_not_double_prefix():
     assert not any(a.startswith("HIP HIP") for a in hip_aliases)
 
 
-def test_empty_search_key_aliases_are_dropped():
+def test_empty_search_key_aliases_are_dropped() -> None:
     """Guard against unsearchable aliases (e.g. bare '-') if any slip past loaders."""
     csn = pl.DataFrame([_csn_row(bayer_raw="")])
     faints = pl.DataFrame([_faints_row(other_id="-")])
@@ -97,7 +97,7 @@ def test_empty_search_key_aliases_are_dropped():
     not (IAU_CSV.is_file() and FAINTS_CSV.is_file()),
     reason="vendored naming snapshots missing",
 )
-def test_snapshot_aliases_have_no_junk():
+def test_snapshot_aliases_have_no_junk() -> None:
     csn = iau_csn.load(IAU_CSV)
     faints = wgsn_faints.load(FAINTS_CSV)
     stars = build_stars(csn, faints)

@@ -21,7 +21,7 @@ PSCOMPPARS_SNAPSHOT = REPO_ROOT / "data" / "raw" / "nasa_pscomppars" / "current"
 GAIA_HOST_SNAPSHOT = REPO_ROOT / "data" / "raw" / "gaia_hosts" / "current"
 
 
-def test_gaia_host_ids_are_non_null_unique_and_sorted():
+def test_gaia_host_ids_are_non_null_unique_and_sorted() -> None:
     hosts = pl.DataFrame({"gaia_source_id": [42, None, 7, 42]}, schema={"gaia_source_id": pl.Int64})
 
     actual = build_gaia_host_ids(hosts)
@@ -31,7 +31,7 @@ def test_gaia_host_ids_are_non_null_unique_and_sorted():
     assert_frame_equal(actual, expected)
 
 
-def test_current_snapshot_has_expected_gaia_host_ids():
+def test_current_snapshot_has_expected_gaia_host_ids() -> None:
     staging = load(PSCOMPPARS_SNAPSHOT)
     hosts = build_hosts(staging)
 
@@ -43,7 +43,7 @@ def test_current_snapshot_has_expected_gaia_host_ids():
     assert gaia_host_ids["gaia_source_id"].is_sorted()
 
 
-def test_gaia_host_batches_are_deterministic():
+def test_gaia_host_batches_are_deterministic() -> None:
     host_ids = pl.DataFrame(
         {
             "gaia_source_id": [50, 10, 40, 20, 30],
@@ -71,7 +71,7 @@ def test_gaia_host_batches_reject_invalid_size(batch_size: int) -> None:
         plan_gaia_host_batches(host_ids, batch_size=batch_size)
 
 
-def test_current_snapshot_fits_into_nine_batches():
+def test_current_snapshot_fits_into_nine_batches() -> None:
     staging = load(PSCOMPPARS_SNAPSHOT)
     hosts = build_hosts(staging)
     host_ids = build_gaia_host_ids(hosts)
@@ -96,7 +96,7 @@ def test_current_snapshot_fits_into_nine_batches():
     assert flattened == host_ids["gaia_source_id"].to_list()
 
 
-def test_gaia_distance_prefers_gspphot_then_inverse_parallax():
+def test_gaia_distance_prefers_gspphot_then_inverse_parallax() -> None:
     frame = pl.DataFrame(
         {
             "distance_gspphot_pc": [25.0, None, None],
@@ -130,7 +130,7 @@ def test_gaia_distance_prefers_gspphot_then_inverse_parallax():
     assert actual[2]["distance_quality"] == "unavailable"
 
 
-def test_inverse_parallax_accepts_missing_ruwe_but_rejects_threshold():
+def test_inverse_parallax_accepts_missing_ruwe_but_rejects_threshold() -> None:
     frame = pl.DataFrame(
         {
             "distance_gspphot_pc": [None, None],
@@ -148,7 +148,7 @@ def test_inverse_parallax_accepts_missing_ruwe_but_rejects_threshold():
     assert actual["distance_method"].to_list() == ["inverse_parallax", "unavailable"]
 
 
-def test_build_gaia_host_sources_matches_current_snapshot():
+def test_build_gaia_host_sources_matches_current_snapshot() -> None:
     staging = load_gaia(GAIA_HOST_SNAPSHOT)
 
     sources = build_gaia_host_sources(staging)
@@ -168,7 +168,7 @@ def test_build_gaia_host_sources_matches_current_snapshot():
     assert "is_valid" not in sources.columns
 
 
-def test_heliocentric_coordinates_use_sun_as_origin():
+def test_heliocentric_coordinates_use_sun_as_origin() -> None:
     frame = pl.DataFrame(
         {
             "galactic_longitude_deg": [
@@ -212,7 +212,7 @@ def test_heliocentric_coordinates_use_sun_as_origin():
     assert rows[4]["heliocentric_z_pc"] is None
 
 
-def test_galactocentric_coordinates_use_milky_way_center_as_origin():
+def test_galactocentric_coordinates_use_milky_way_center_as_origin() -> None:
     frame = pl.DataFrame(
         {
             "galactic_longitude_deg": [

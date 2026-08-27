@@ -89,7 +89,9 @@ def data_root(tmp_path: Path) -> Iterator[Path]:
     reset_settings()
 
 
-def test_build_host_visualization_publishes_arrow(data_root: Path, monkeypatch: pytest.MonkeyPatch):
+def test_build_host_visualization_publishes_arrow(
+    data_root: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     monkeypatch.setattr(
         "app.flows.visualization.EXPECTED_POSITION_STATUS_COUNTS",
         {"available": 1, "no_accepted_distance": 1, "no_exact_gaia_source": 1},
@@ -119,7 +121,7 @@ def test_build_host_visualization_publishes_arrow(data_root: Path, monkeypatch: 
 def test_build_host_visualization_requires_all_processed_inputs(
     data_root: Path,
     missing_filename: str,
-):
+) -> None:
     (data_root / "processed" / missing_filename).unlink()
 
     with pytest.raises(FileNotFoundError, match=missing_filename):

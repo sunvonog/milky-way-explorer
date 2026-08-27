@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterator
 from pathlib import Path
 
 import pytest
@@ -11,14 +12,14 @@ from app.runtime.flow import flow, get_run, get_task, task
 
 
 @pytest.fixture(autouse=True)
-def _clean_settings(tmp_path: Path):
+def _clean_settings(tmp_path: Path) -> Iterator[None]:
     reset_settings()
     override_settings(log_dir=tmp_path / "logs", log_level="WARNING", log_color=False)
     yield
     reset_settings()
 
 
-def test_task_callable_outside_run():
+def test_task_callable_outside_run() -> None:
     @task(name="standalone")
     def add(a: int, b: int) -> int:
         return a + b
@@ -27,7 +28,7 @@ def test_task_callable_outside_run():
     assert get_run() is None
 
 
-def test_retries_then_succeeds():
+def test_retries_then_succeeds() -> None:
     attempts = {"n": 0}
 
     @task(name="flaky", retries=2, retry_delay=0.01)
@@ -47,7 +48,7 @@ def test_retries_then_succeeds():
     assert ctx is None  # cleaned up after flow exits
 
 
-def test_failure_propagates_and_records_task():
+def test_failure_propagates_and_records_task() -> None:
     captured: dict[str, object] = {}
 
     @task(name="boom", retries=1, retry_delay=0.01)
@@ -69,7 +70,7 @@ def test_failure_propagates_and_records_task():
     assert captured["tasks"] == [("boom", "failed", 2)]
 
 
-def test_subflow_joins_parent_run(tmp_path: Path):
+def test_subflow_joins_parent_run(tmp_path: Path) -> None:
     run_ids: list[str] = []
 
     @flow(name="child")
@@ -98,7 +99,7 @@ def test_subflow_joins_parent_run(tmp_path: Path):
     )
 
 
-def test_run_summary_contains_task_records(tmp_path: Path):
+def test_run_summary_contains_task_records(tmp_path: Path) -> None:
     @task(name="work")
     def work() -> int:
         return 42
@@ -118,7 +119,7 @@ def test_run_summary_contains_task_records(tmp_path: Path):
     run()
 
 
-def test_keyed_task_instances_are_distinct():
+def test_keyed_task_instances_are_distinct() -> None:
     captured: dict[str, object] = {}
 
     @task(name="fetch", key="source")
@@ -142,7 +143,7 @@ def test_keyed_task_instances_are_distinct():
     assert captured["keys"] == ["a", "b"]
 
 
-def test_keyed_task_resolves_keyword_and_default():
+def test_keyed_task_resolves_keyword_and_default() -> None:
     captured: list[str] = []
 
     @task(name="fetch", key="source")
@@ -161,7 +162,7 @@ def test_keyed_task_resolves_keyword_and_default():
     assert captured == ["fetch[via_kw]", "fetch[default]"]
 
 
-def test_invalid_task_key_raises_at_decoration():
+def test_invalid_task_key_raises_at_decoration() -> None:
     with pytest.raises(ValueError, match="not a parameter"):
 
         @task(name="bad", key="nope")
@@ -169,7 +170,7 @@ def test_invalid_task_key_raises_at_decoration():
             return source
 
 
-def test_task_summary_uses_instance_label(tmp_path: Path):
+def test_task_summary_uses_instance_label(tmp_path: Path) -> None:
     import json
 
     @task(name="fetch", key="source")

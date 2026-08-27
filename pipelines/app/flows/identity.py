@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 
 import polars as pl
+from logly import Logger
 
 from app.config import get_settings
 from app.domain.identity import (
@@ -29,7 +30,7 @@ EXPECT_DROPPED_STARS = 1
 EXPECT_ALIASES = 2875
 
 
-def _ctx_log(**fields: object):
+def _ctx_log(**fields: object) -> Logger:
     run = get_run()
     return bound_log(
         run_id=run.run_id if run else "-",

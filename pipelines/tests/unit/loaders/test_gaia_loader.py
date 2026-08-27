@@ -51,7 +51,7 @@ def _write_batch(
     return path
 
 
-def test_load_combines_normalizes_and_sorts_batches(tmp_path: Path):
+def test_load_combines_normalizes_and_sorts_batches(tmp_path: Path) -> None:
     snapshot = tmp_path / "current"
 
     _write_batch(snapshot, 2, [_raw_row(42)])
@@ -89,7 +89,7 @@ def test_load_combines_normalizes_and_sorts_batches(tmp_path: Path):
 
 def test_invalid_gaia_row_is_retained_but_flagged(
     tmp_path: Path,
-):
+) -> None:
     snapshot = tmp_path / "current"
 
     _write_batch(snapshot, 1, [_raw_row(7), _raw_row(42, designation="Gaia DR3 999", ra=400.0)])
@@ -101,7 +101,7 @@ def test_invalid_gaia_row_is_retained_but_flagged(
     assert frame["is_valid"].to_list() == [True, False]
 
 
-def test_duplicate_gaia_ids_are_retained_but_invalid(tmp_path: Path):
+def test_duplicate_gaia_ids_are_retained_but_invalid(tmp_path: Path) -> None:
     snapshot = tmp_path / "current"
 
     _write_batch(snapshot, 1, [_raw_row(7)])
@@ -114,7 +114,7 @@ def test_duplicate_gaia_ids_are_retained_but_invalid(tmp_path: Path):
     assert frame["is_valid"].to_list() == [False, False]
 
 
-def test_load_rejects_snapshot_without_batches(tmp_path: Path):
+def test_load_rejects_snapshot_without_batches(tmp_path: Path) -> None:
     snapshot = tmp_path / "current"
     snapshot.mkdir()
 
@@ -125,11 +125,11 @@ def test_load_rejects_snapshot_without_batches(tmp_path: Path):
         gaia.load(snapshot)
 
 
-def test_raw_schema_matches_gaia_query_columns():
+def test_raw_schema_matches_gaia_query_columns() -> None:
     assert tuple(gaia.RAW_SCHEMA) == GAIA_HOST_COLUMNS
 
 
-def test_current_gaia_host_snapshot_contract():
+def test_current_gaia_host_snapshot_contract() -> None:
     frame = gaia.load(CURRENT_SNAPSHOT)
 
     assert len(list((CURRENT_SNAPSHOT / "batches").glob("gaia-host-*.csv"))) == 9

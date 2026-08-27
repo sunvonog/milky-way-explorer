@@ -21,10 +21,10 @@ def isolated_settings(tmp_path: Path) -> Iterator[None]:
     reset_settings()
 
 
-def test_canonical_build_runs_publication_flows_in_order(monkeypatch: pytest.MonkeyPatch):
+def test_canonical_build_runs_publication_flows_in_order(monkeypatch: pytest.MonkeyPatch) -> None:
     calls: list[str] = []
 
-    def record_identity():
+    def record_identity() -> None:
         calls.append("identity")
 
     def record_exoplanets() -> dict[str, Path]:
@@ -62,7 +62,7 @@ def test_canonical_build_runs_publication_flows_in_order(monkeypatch: pytest.Mon
 
 def test_main_runs_gaia_host_refresh(
     monkeypatch: pytest.MonkeyPatch,
-):
+) -> None:
     calls: list[str] = []
 
     def record_gaia_host_refresh() -> Path:
@@ -77,7 +77,7 @@ def test_main_runs_gaia_host_refresh(
     assert calls == ["gaia-host-refresh"]
 
 
-def test_main_runs_gaia_background_refresh(monkeypatch: pytest.MonkeyPatch):
+def test_main_runs_gaia_background_refresh(monkeypatch: pytest.MonkeyPatch) -> None:
     calls: list[str] = []
 
     def record_gaia_background_refresh() -> Path:
@@ -92,7 +92,7 @@ def test_main_runs_gaia_background_refresh(monkeypatch: pytest.MonkeyPatch):
     assert calls == ["gaia-background-refresh"]
 
 
-def test_main_runs_gaia_density_build(monkeypatch: pytest.MonkeyPatch):
+def test_main_runs_gaia_density_build(monkeypatch: pytest.MonkeyPatch) -> None:
     calls: list[str] = []
 
     def record_gaia_density_build() -> Path:

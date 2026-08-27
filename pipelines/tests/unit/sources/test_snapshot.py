@@ -7,7 +7,7 @@ import pytest
 from app.sources.snapshot import snapshot_dir, snapshot_directory, snapshot_local
 
 
-def test_snapshot_is_single_current_dir_and_overwrites(tmp_path: Path):
+def test_snapshot_is_single_current_dir_and_overwrites(tmp_path: Path) -> None:
     src = tmp_path / "src.csv"
     src.write_text("name\nSirius\n", encoding="utf-8")
     raw = tmp_path / "raw"
@@ -19,7 +19,7 @@ def test_snapshot_is_single_current_dir_and_overwrites(tmp_path: Path):
     assert versions == [snapshot_dir(raw, "demo")]  # exactly one 'current' dir
 
 
-def test_checksum_matches_bytes(tmp_path: Path):
+def test_checksum_matches_bytes(tmp_path: Path) -> None:
     src = tmp_path / "src.csv"
     src.write_bytes(b"hello")
     raw = tmp_path / "raw"
@@ -29,7 +29,7 @@ def test_checksum_matches_bytes(tmp_path: Path):
     assert meta["sha256"] == hashlib.sha256(b"hello").hexdigest()
 
 
-def test_directory_snapshot_publishes_nested_files_and_manifest(tmp_path: Path):
+def test_directory_snapshot_publishes_nested_files_and_manifest(tmp_path: Path) -> None:
     staged = tmp_path / "staged"
     batches = staged / "batches"
     batches.mkdir(parents=True)
@@ -71,7 +71,7 @@ def test_directory_snapshot_publishes_nested_files_and_manifest(tmp_path: Path):
     ]
 
 
-def test_directory_snapshot_removes_files_from_previous_version(tmp_path: Path):
+def test_directory_snapshot_removes_files_from_previous_version(tmp_path: Path) -> None:
     raw = tmp_path / "raw"
 
     first = tmp_path / "first"
@@ -90,7 +90,7 @@ def test_directory_snapshot_removes_files_from_previous_version(tmp_path: Path):
     assert (current / "new.csv").is_file()
 
 
-def test_empty_directory_does_not_replace_current_snapshot(tmp_path: Path):
+def test_empty_directory_does_not_replace_current_snapshot(tmp_path: Path) -> None:
     raw = tmp_path / "raw"
 
     valid = tmp_path / "valid"

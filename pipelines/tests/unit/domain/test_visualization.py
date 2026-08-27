@@ -111,7 +111,9 @@ def current_snapshot_records() -> pl.DataFrame:
     return build_host_visualization_records(hosts, systems, gaia_sources)
 
 
-def test_builds_one_visualization_record_per_host(visualization_inputs: VisualizationInputs):
+def test_builds_one_visualization_record_per_host(
+    visualization_inputs: VisualizationInputs,
+) -> None:
     hosts, systems, gaia_sources = visualization_inputs
 
     records = build_host_visualization_records(hosts, systems, gaia_sources)
@@ -121,7 +123,7 @@ def test_builds_one_visualization_record_per_host(visualization_inputs: Visualiz
     assert records["host_id"].to_list() == ["nea:host:alpha", "nea:host:beta", "nea:host:gamma"]
 
 
-def test_combines_catalogue_and_spatial_fields(visualization_inputs: VisualizationInputs):
+def test_combines_catalogue_and_spatial_fields(visualization_inputs: VisualizationInputs) -> None:
     hosts, systems, gaia_sources = visualization_inputs
 
     records = build_host_visualization_records(hosts, systems, gaia_sources)
@@ -141,7 +143,9 @@ def test_combines_catalogue_and_spatial_fields(visualization_inputs: Visualizati
     assert alpha["bp_rp_color"] == 0.8
 
 
-def test_explains_why_hosts_have_no_renderable_position(visualization_inputs: VisualizationInputs):
+def test_explains_why_hosts_have_no_renderable_position(
+    visualization_inputs: VisualizationInputs,
+) -> None:
     hosts, systems, gaia_sources = visualization_inputs
 
     records = build_host_visualization_records(hosts, systems, gaia_sources)
@@ -157,7 +161,7 @@ def test_explains_why_hosts_have_no_renderable_position(visualization_inputs: Vi
 
 def test_retains_unpositioned_hosts_with_null_spatial_fields(
     visualization_inputs: VisualizationInputs,
-):
+) -> None:
     hosts, systems, gaia_source = visualization_inputs
 
     records = build_host_visualization_records(hosts, systems, gaia_source)
@@ -173,7 +177,7 @@ def test_retains_unpositioned_hosts_with_null_spatial_fields(
 
 def test_current_snapshots_have_expected_visualization_coverage(
     current_snapshot_records: pl.DataFrame,
-):
+) -> None:
     records = current_snapshot_records
 
     status_counts = {
@@ -198,7 +202,7 @@ def test_current_snapshots_have_expected_visualization_coverage(
 
 def test_only_available_hosts_have_spatial_coordinates(
     current_snapshot_records: pl.DataFrame,
-):
+) -> None:
     records = current_snapshot_records
 
     coordinate_columns = (

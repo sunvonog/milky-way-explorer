@@ -72,7 +72,7 @@ def _write_background_snapshot(data_root: Path) -> Path:
     return snapshot
 
 
-def test_build_gaia_density_publishes_all_configured_grid(data_root: Path):
+def test_build_gaia_density_publishes_all_configured_grid(data_root: Path) -> None:
     _write_background_snapshot(data_root)
 
     path = build_gaia_density()
@@ -100,6 +100,6 @@ def test_build_gaia_density_publishes_all_configured_grid(data_root: Path):
     assert visualization["cell_size_kpc"].unique().sort().to_list() == [10.0, 20.0]
 
 
-def test_build_gaia_density_requires_committed_snapshot(data_root: Path):
+def test_build_gaia_density_requires_committed_snapshot(data_root: Path) -> None:
     with pytest.raises(FileNotFoundError, match="Gaia background snapshot"):
         build_gaia_density()

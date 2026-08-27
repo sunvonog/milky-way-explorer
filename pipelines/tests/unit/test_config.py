@@ -66,6 +66,17 @@ def test_cli_override_validates_values_without_mutating_settings() -> None:
     assert get_settings().gaia_background_source_count > 0
 
 
+def test_empty_path_env_values_use_default(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("MWE_DATA_ROOT", "")
+    monkeypatch.setenv("MWE_LOG_DIR", "")
+    reset_settings()
+
+    settings = get_settings()
+
+    assert settings.data_root == REPO_ROOT / "data"
+    assert settings.logs_root == REPO_ROOT / "data" / "logs"
+
+
 def test_gaia_background_retrieval_env_overrides(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

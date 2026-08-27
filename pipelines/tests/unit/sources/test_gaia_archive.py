@@ -68,7 +68,7 @@ class FakeGaiaClient:
         return FakeGaiaJob(self.phase)
 
 
-def test_gaia_host_columns_match_enrichment_contract():
+def test_gaia_host_columns_match_enrichment_contract() -> None:
     assert GAIA_HOST_COLUMNS == (
         "source_id",
         "designation",
@@ -104,7 +104,7 @@ def test_gaia_host_columns_match_enrichment_contract():
     )
 
 
-def test_gaia_host_query_selects_one_exact_batch():
+def test_gaia_host_query_selects_one_exact_batch() -> None:
     batch = GaiaHostBatch(
         batch_number=3,
         source_ids=(7, 42),
@@ -119,18 +119,18 @@ def test_gaia_host_query_selects_one_exact_batch():
     assert query.endswith("ORDER BY source_id")
 
 
-def test_gaia_host_query_has_no_duplicate_columns():
+def test_gaia_host_query_has_no_duplicate_columns() -> None:
     assert len(GAIA_HOST_COLUMNS) == len(set(GAIA_HOST_COLUMNS))
 
 
-def test_gaia_host_query_rejects_empty_batch():
+def test_gaia_host_query_rejects_empty_batch() -> None:
     batch = GaiaHostBatch(batch_number=1, source_ids=())
 
     with pytest.raises(ValueError, match="Gaia host batch must not be empty"):
         gaia_host_query(batch)
 
 
-def test_download_gaia_host_batch_uses_async_file_output(tmp_path: Path):
+def test_download_gaia_host_batch_uses_async_file_output(tmp_path: Path) -> None:
     batch = GaiaHostBatch(batch_number=3, source_ids=(7, 42))
     destination = tmp_path / "gaia-host-0003.csv"
     partial = tmp_path / ".gaia-host-0003.csv.part"
@@ -154,7 +154,7 @@ def test_download_gaia_host_batch_uses_async_file_output(tmp_path: Path):
     ]
 
 
-def test_download_gaia_host_batch_cleans_up_failed_job(tmp_path: Path):
+def test_download_gaia_host_batch_cleans_up_failed_job(tmp_path: Path) -> None:
     batch = GaiaHostBatch(batch_number=2, source_ids=(7,))
     destination = tmp_path / "gaia-host-0002.csv"
     partial = tmp_path / ".gaia-host-0002.csv.part"
@@ -171,7 +171,7 @@ def test_download_gaia_host_batch_cleans_up_failed_job(tmp_path: Path):
     assert not partial.exists()
 
 
-def test_download_gaia_host_batch_rejects_missing_output(tmp_path: Path):
+def test_download_gaia_host_batch_rejects_missing_output(tmp_path: Path) -> None:
     batch = GaiaHostBatch(batch_number=4, source_ids=(7,))
     destination = tmp_path / "gaia-host-0004.csv"
     partial = tmp_path / ".gaia-host-0004.csv.part"
@@ -184,7 +184,7 @@ def test_download_gaia_host_batch_rejects_missing_output(tmp_path: Path):
     assert not partial.exists()
 
 
-def test_download_gaia_host_batch_reports_submission_response(tmp_path: Path):
+def test_download_gaia_host_batch_reports_submission_response(tmp_path: Path) -> None:
     batch = GaiaHostBatch(batch_number=1, source_ids=(7,))
     destination = tmp_path / "gaia-host-0001.csv"
     error_output = tmp_path / ".gaia-host-0001.csv.part.error"
@@ -198,7 +198,7 @@ def test_download_gaia_host_batch_reports_submission_response(tmp_path: Path):
     assert not error_output.exists()
 
 
-def test_gaia_background_query_selects_exact_random_index_range():
+def test_gaia_background_query_selects_exact_random_index_range() -> None:
     batch = GaiaBackgroundBatch(
         batch_number=2,
         random_index_start=2_000,
@@ -229,14 +229,14 @@ ORDER BY source_id"""
 
 
 @pytest.mark.parametrize(("start", "stop"), [(-1, 10), (10, 10), (11, 10)])
-def test_gaia_background_query_rejects_invalid_ranges(start: int, stop: int):
+def test_gaia_background_query_rejects_invalid_ranges(start: int, stop: int) -> None:
     batch = GaiaBackgroundBatch(batch_number=1, random_index_start=start, random_index_stop=stop)
 
     with pytest.raises(ValueError, match="random-index range"):
         gaia_background_query(batch)
 
 
-def test_download_gaia_background_batch_uses_async_file_output(tmp_path: Path):
+def test_download_gaia_background_batch_uses_async_file_output(tmp_path: Path) -> None:
     batch = GaiaBackgroundBatch(batch_number=2, random_index_start=2_000, random_index_stop=3_000)
     destination = tmp_path / "gaia-background-0002.csv"
     partial = tmp_path / ".gaia-background-0002.csv.part"

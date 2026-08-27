@@ -15,7 +15,7 @@ IAU_CSV = REPO_ROOT / "data/raw/iau_csn/current/IAU-Catalog-of-Star-Names.csv"
 FAINTS_CSV = REPO_ROOT / "data/raw/wgsn_faints/current/WGSN-Faints.csv"
 
 
-def test_null_placeholders_nulls_known_tokens():
+def test_null_placeholders_nulls_known_tokens() -> None:
     frame = pl.DataFrame({"a": ["ok", "", "_", "-", "--", "  _  "], "n": [1, 2, 3, 4, 5, 6]})
     out = null_placeholders(frame)
     assert out["a"].to_list() == ["ok", None, None, None, None, None]
@@ -32,12 +32,12 @@ def test_null_placeholders_nulls_known_tokens():
         ("-", "-"),
     ],
 )
-def test_strip_catalogue_prefix_hip(raw, expected):
+def test_strip_catalogue_prefix_hip(raw, expected) -> None:
     frame = pl.DataFrame({"hip": [raw]}).with_columns(hip=strip_catalogue_prefix("hip", "HIP"))
     assert frame["hip"][0] == expected
 
 
-def test_iau_csn_nulls_empty_strings(tmp_path: Path):
+def test_iau_csn_nulls_empty_strings(tmp_path: Path) -> None:
     csv = tmp_path / "csn.csv"
     csv.write_text(
         '"<span>proper names</span>","<span>NEC+</span>","<span>Designation</span>",'
@@ -58,7 +58,7 @@ def test_iau_csn_nulls_empty_strings(tmp_path: Path):
     assert frame.filter(pl.col("proper_name").is_null())["is_valid"][0] is False
 
 
-def test_wgsn_faints_normalises_hip_and_placeholders(tmp_path: Path):
+def test_wgsn_faints_normalises_hip_and_placeholders(tmp_path: Path) -> None:
     csv = tmp_path / "faints.csv"
     csv.write_text(
         '"WGSN-ID","Name","HIP","RA2000","DE2000","Vmag","type","HR","HD",'
@@ -84,14 +84,14 @@ def test_wgsn_faints_normalises_hip_and_placeholders(tmp_path: Path):
 
 
 @pytest.mark.skipif(not IAU_CSV.is_file(), reason="vendored IAU-CSN snapshot missing")
-def test_iau_csn_snapshot_has_no_empty_hip_strings():
+def test_iau_csn_snapshot_has_no_empty_hip_strings() -> None:
     frame = iau_csn.load(IAU_CSV)
     assert frame.filter(pl.col("hip") == "").height == 0
     assert int(frame["is_valid"].sum()) == 605
 
 
 @pytest.mark.skipif(not FAINTS_CSV.is_file(), reason="vendored WGSN_Faints snapshot missing")
-def test_wgsn_faints_snapshot_hips_are_bare_digits():
+def test_wgsn_faints_snapshot_hips_are_bare_digits() -> None:
     frame = wgsn_faints.load(FAINTS_CSV)
     hips = frame["hip"].drop_nulls()
     assert hips.len() == 83

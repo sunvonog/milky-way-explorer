@@ -1,4 +1,5 @@
 import shutil
+from collections.abc import Iterator
 from pathlib import Path
 
 import polars as pl
@@ -35,7 +36,7 @@ EXPECTED_ROWS = {
 
 
 @pytest.fixture
-def data_root(tmp_path: Path):
+def data_root(tmp_path: Path) -> Iterator[Path]:
     reset_settings()
     override_settings(
         data_root=tmp_path, log_dir=tmp_path / "logs", log_level="WARNING", log_color=False
@@ -50,11 +51,11 @@ def data_root(tmp_path: Path):
     reset_settings()
 
 
-def test_output_filenames_are_stable():
+def test_output_filenames_are_stable() -> None:
     assert OUTPUT_FILENAMES == EXPECTED_FILENAMES
 
 
-def test_build_writes_expected_parquet_files(data_root: Path):
+def test_build_writes_expected_parquet_files(data_root: Path) -> None:
     paths = build_exoplanets()
 
     assert set(paths) == set(OUTPUT_FILENAMES)
@@ -67,7 +68,7 @@ def test_build_writes_expected_parquet_files(data_root: Path):
         assert frame.height == EXPECTED_ROWS[key]
 
 
-def test_published_foreign_keys_are_valid(data_root: Path):
+def test_published_foreign_keys_are_valid(data_root: Path) -> None:
     paths = build_exoplanets()
 
     planets = pl.read_parquet(paths["planets"])

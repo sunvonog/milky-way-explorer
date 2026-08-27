@@ -6,7 +6,7 @@ from app.loaders.pscomppars import RAW_SCHEMA, load, normalize
 SNAPSHOT = REPO_ROOT / "data" / "raw" / "nasa_pscomppars" / "current" / "pscomppars.csv"
 
 
-def test_current_snapshot_contract():
+def test_current_snapshot_contract() -> None:
     frame = load(SNAPSHOT)
 
     assert frame.height == 6336
@@ -15,7 +15,7 @@ def test_current_snapshot_contract():
     assert int(frame["is_valid"].sum()) == 6336
 
 
-def test_current_snapshot_gaia_ids_are_normalized():
+def test_current_snapshot_gaia_ids_are_normalized() -> None:
     frame = load(SNAPSHOT)
     gaia_ids = frame["gaia_source_id"].drop_nulls()
 
@@ -24,14 +24,14 @@ def test_current_snapshot_gaia_ids_are_normalized():
     assert gaia_ids.dtype == pl.Int64
 
 
-def test_flags_are_boolean():
+def test_flags_are_boolean() -> None:
     frame = load(SNAPSHOT)
 
     assert frame.schema["is_circumbinary"] == pl.Boolean
     assert frame.schema["is_controversial"] == pl.Boolean
 
 
-def test_malformed_gaia_designation_is_retained_but_invalid():
+def test_malformed_gaia_designation_is_retained_but_invalid() -> None:
     raw = pl.read_csv(
         SNAPSHOT,
         schema=RAW_SCHEMA,
