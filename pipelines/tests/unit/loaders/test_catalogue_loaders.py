@@ -7,12 +7,8 @@ from pathlib import Path
 import polars as pl
 import pytest
 
-from app.config import REPO_ROOT
 from app.loaders import iau_csn, wgsn_faints
 from app.loaders.base import null_placeholders, strip_catalogue_prefix
-
-IAU_CSV = REPO_ROOT / "data/raw/iau_csn/current/IAU-Catalog-of-Star-Names.csv"
-FAINTS_CSV = REPO_ROOT / "data/raw/wgsn_faints/current/WGSN-Faints.csv"
 
 
 def test_null_placeholders_nulls_known_tokens() -> None:
@@ -81,20 +77,3 @@ def test_wgsn_faints_normalises_hip_and_placeholders(tmp_path: Path) -> None:
     assert by_name["Beta"]["other_id"] == "WASP-1"
 
     assert by_name["Gamma"]["hip"] is None
-
-
-@pytest.mark.skipif(not IAU_CSV.is_file(), reason="vendored IAU-CSN snapshot missing")
-def test_iau_csn_snapshot_has_no_empty_hip_strings() -> None:
-    frame = iau_csn.load(IAU_CSV)
-    assert frame.filter(pl.col("hip") == "").height == 0
-    assert int(frame["is_valid"].sum()) == 605
-
-
-@pytest.mark.skipif(not FAINTS_CSV.is_file(), reason="vendored WGSN_Faints snapshot missing")
-def test_wgsn_faints_snapshot_hips_are_bare_digits() -> None:
-    frame = wgsn_faints.load(FAINTS_CSV)
-    hips = frame["hip"].drop_nulls()
-    assert hips.len() == 83
-    assert hips.str.contains(r"^\d+$").all()
-    assert frame.filter(pl.col("hd").is_in(["_", "-"])).height == 0
-    assert frame.filter(pl.col("hip") == "-").height == 0

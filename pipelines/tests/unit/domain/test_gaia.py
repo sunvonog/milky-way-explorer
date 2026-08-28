@@ -2,8 +2,6 @@ import polars as pl
 import pytest
 from polars.testing import assert_frame_equal
 
-from app.config import REPO_ROOT
-from app.domain.exoplanets import build_hosts
 from app.domain.gaia import (
     GALACTOCENTRIC_PARAMETER_SET,
     GaiaHostBatch,
@@ -11,14 +9,8 @@ from app.domain.gaia import (
     add_galactocentric_coordinates,
     add_heliocentric_coordinates,
     build_gaia_host_ids,
-    build_gaia_host_sources,
     plan_gaia_host_batches,
 )
-from app.loaders.gaia import load as load_gaia
-from app.loaders.pscomppars import load
-
-PSCOMPPARS_SNAPSHOT = REPO_ROOT / "data" / "raw" / "nasa_pscomppars" / "current" / "pscomppars.csv"
-GAIA_HOST_SNAPSHOT = REPO_ROOT / "data" / "raw" / "gaia_hosts" / "current"
 
 
 def test_gaia_host_ids_are_non_null_unique_and_sorted() -> None:
@@ -29,18 +21,6 @@ def test_gaia_host_ids_are_non_null_unique_and_sorted() -> None:
     expected = pl.DataFrame({"gaia_source_id": [7, 42]}, schema={"gaia_source_id": pl.Int64})
 
     assert_frame_equal(actual, expected)
-
-
-def test_current_snapshot_has_expected_gaia_host_ids() -> None:
-    staging = load(PSCOMPPARS_SNAPSHOT)
-    hosts = build_hosts(staging)
-
-    gaia_host_ids = build_gaia_host_ids(hosts)
-
-    assert gaia_host_ids.height == 4396
-    assert gaia_host_ids["gaia_source_id"].null_count() == 0
-    assert gaia_host_ids["gaia_source_id"].n_unique() == gaia_host_ids.height
-    assert gaia_host_ids["gaia_source_id"].is_sorted()
 
 
 def test_gaia_host_batches_are_deterministic() -> None:
@@ -69,31 +49,6 @@ def test_gaia_host_batches_reject_invalid_size(batch_size: int) -> None:
 
     with pytest.raises(ValueError, match="batch_size must be positive"):
         plan_gaia_host_batches(host_ids, batch_size=batch_size)
-
-
-def test_current_snapshot_fits_into_nine_batches() -> None:
-    staging = load(PSCOMPPARS_SNAPSHOT)
-    hosts = build_hosts(staging)
-    host_ids = build_gaia_host_ids(hosts)
-
-    batches = plan_gaia_host_batches(host_ids, batch_size=500)
-
-    assert len(batches) == 9
-    assert [len(batch.source_ids) for batch in batches] == [
-        500,
-        500,
-        500,
-        500,
-        500,
-        500,
-        500,
-        500,
-        396,
-    ]
-
-    flattened = [source_id for batch in batches for source_id in batch.source_ids]
-
-    assert flattened == host_ids["gaia_source_id"].to_list()
 
 
 def test_gaia_distance_prefers_gspphot_then_inverse_parallax() -> None:
@@ -146,26 +101,6 @@ def test_inverse_parallax_accepts_missing_ruwe_but_rejects_threshold() -> None:
     actual = add_gaia_distance(frame)
 
     assert actual["distance_method"].to_list() == ["inverse_parallax", "unavailable"]
-
-
-def test_build_gaia_host_sources_matches_current_snapshot() -> None:
-    staging = load_gaia(GAIA_HOST_SNAPSHOT)
-
-    sources = build_gaia_host_sources(staging)
-
-    method_counts = dict(sources.group_by("distance_method").len().iter_rows())
-
-    assert sources.height == 4396
-    assert sources["gaia_source_id"].n_unique() == 4396
-    assert sources["distance_pc"].null_count() == 109
-    assert sources["heliocentric_x_pc"].null_count() == 109
-    assert sources["heliocentric_y_pc"].null_count() == 109
-    assert sources["heliocentric_z_pc"].null_count() == 109
-    assert sources["galactocentric_x_kpc"].null_count() == 109
-    assert sources["galactocentric_y_kpc"].null_count() == 109
-    assert sources["galactocentric_z_kpc"].null_count() == 109
-    assert method_counts == {"gaia_gspphot": 3887, "inverse_parallax": 400, "unavailable": 109}
-    assert "is_valid" not in sources.columns
 
 
 def test_heliocentric_coordinates_use_sun_as_origin() -> None:

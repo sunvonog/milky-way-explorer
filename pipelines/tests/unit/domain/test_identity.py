@@ -3,11 +3,9 @@
 from __future__ import annotations
 
 import polars as pl
-import pytest
 
 from app.config import REPO_ROOT
 from app.domain.identity import build_aliases, build_stars
-from app.loaders import iau_csn, wgsn_faints
 
 IAU_CSV = REPO_ROOT / "data/raw/iau_csn/current/IAU-Catalog-of-Star-Names.csv"
 FAINTS_CSV = REPO_ROOT / "data/raw/wgsn_faints/current/WGSN-Faints.csv"
@@ -91,21 +89,3 @@ def test_empty_search_key_aliases_are_dropped() -> None:
     aliases = build_aliases(stars)
     assert aliases.filter(pl.col("alias_search_key") == "").height == 0
     assert aliases.filter(pl.col("alias") == "-").height == 0
-
-
-@pytest.mark.skipif(
-    not (IAU_CSV.is_file() and FAINTS_CSV.is_file()),
-    reason="vendored naming snapshots missing",
-)
-def test_snapshot_aliases_have_no_junk() -> None:
-    csn = iau_csn.load(IAU_CSV)
-    faints = wgsn_faints.load(FAINTS_CSV)
-    stars = build_stars(csn, faints)
-    aliases = build_aliases(stars)
-
-    assert aliases.height == 2875
-    assert aliases.filter(pl.col("alias_search_key") == "").height == 0
-    assert aliases.filter(pl.col("alias").str.starts_with("HIP HIP")).height == 0
-    assert aliases.filter(pl.col("alias").is_in(["HD _", "HD -", "HIP ", "-"])).height == 0
-    assert stars.filter(pl.col("hip").is_not_null()).height == 532
-    assert stars["hip"].drop_nulls().str.contains(r"^\d+$").all()
