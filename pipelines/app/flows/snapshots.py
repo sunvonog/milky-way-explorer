@@ -12,6 +12,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from logly import Logger
+
 from app.config import get_settings
 from app.runtime.flow import flow, get_run, get_task, task
 from app.runtime.logging import bound_log
@@ -26,7 +28,7 @@ NAMING_SOURCES: dict[str, str] = {
 NAMING_ORIGIN = "https://exopla.net"
 
 
-def _ctx_log(**fields: object):
+def _ctx_log(**fields: object) -> Logger:
     run = get_run()
     return bound_log(
         run_id=run.run_id if run else "-",

@@ -1,4 +1,3 @@
-from collections.abc import Iterator
 from pathlib import Path
 
 import polars as pl
@@ -10,22 +9,15 @@ from app.artifacts import (
     GAIA_HOST_SOURCES_FILENAME,
     HOST_VISUALIZATION_FILENAME,
 )
-from app.config import override_settings, reset_settings
+from app.config import override_settings
 from app.flows.visualization import build_host_visualization
 
 
 @pytest.fixture
-def data_root(tmp_path: Path) -> Iterator[Path]:
-    reset_settings()
-    override_settings(
-        data_root=tmp_path,
-        log_dir=tmp_path / "logs",
-        log_level="WARNING",
-        log_color=False,
-        strict_checks=True,
-    )
+def data_root(isolated_data_root: Path) -> Path:
+    override_settings(strict_checks=True)
 
-    processed = tmp_path / "processed"
+    processed = isolated_data_root / "processed"
     processed.mkdir(parents=True)
 
     pl.DataFrame(
@@ -84,12 +76,12 @@ def data_root(tmp_path: Path) -> Iterator[Path]:
         },
     ).write_parquet(processed / GAIA_HOST_SOURCES_FILENAME)
 
-    yield tmp_path
-
-    reset_settings()
+    return isolated_data_root
 
 
-def test_build_host_visualization_publishes_arrow(data_root: Path, monkeypatch: pytest.MonkeyPatch):
+def test_build_host_visualization_publishes_arrow(
+    data_root: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     monkeypatch.setattr(
         "app.flows.visualization.EXPECTED_POSITION_STATUS_COUNTS",
         {"available": 1, "no_accepted_distance": 1, "no_exact_gaia_source": 1},
@@ -119,7 +111,7 @@ def test_build_host_visualization_publishes_arrow(data_root: Path, monkeypatch: 
 def test_build_host_visualization_requires_all_processed_inputs(
     data_root: Path,
     missing_filename: str,
-):
+) -> None:
     (data_root / "processed" / missing_filename).unlink()
 
     with pytest.raises(FileNotFoundError, match=missing_filename):

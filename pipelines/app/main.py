@@ -2,10 +2,16 @@
 
 Usage::
 
-    uv run python -m app.main                      # full canonical build
-    uv run python -m app.main --strict             # fail on expectation misses
+    uv run python -m app.main                           # full canonical build
+    uv run python -m app.main --strict                  # fail on expectation misses
     uv run python -m app.main --log-level DEBUG
-    uv run python -m app.main refresh-snapshots    # maintainer-only path
+    uv run python -m app.main --log-json                # JSON on the console (CI)
+    uv run python -m app.main refresh-snapshots         # maintainer-only naming refresh
+    uv run python -m app.main refresh-pscomppars        # maintainer-only NASA refresh
+    uv run python -m app.main refresh-gaia-hosts        # maintainer-only Gaia host refresh
+    uv run python -m app.main refresh-gaia-background   # maintainer-only Gaia background
+    uv run python -m app.main build-gaia-density        # density Parquet + Arrow
+    uv run python -m app.main publish-release --build-id local-001
 """
 
 from __future__ import annotations
@@ -23,6 +29,7 @@ from app.flows.gaia import (
     refresh_gaia_hosts,
 )
 from app.flows.identity import build_identity
+from app.flows.release import publish_current_release
 from app.flows.snapshots import refresh_snapshots
 from app.flows.visualization import build_host_visualization
 from app.runtime.flow import flow
@@ -30,13 +37,16 @@ from app.runtime.flow import flow
 
 @flow(name="canonical-build")
 def canonical_build() -> None:
-    """Build identity, exoplanet and Gaia retrieval-manifest tables."""
+    """Build identity, exoplanet, Gaia host, and host-visualization artifacts.
+
+    Density aggregation and immutable release publication remain separate
+    CLI commands (`build-gaia-density`, `publish-release`).
+    """
     build_identity()
     build_exoplanets()
     build_gaia_host_manifest()
     build_gaia_hosts()
     build_host_visualization()
-    # future: gaia enrichment, density aggregation, publication
 
 
 def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
@@ -55,6 +65,7 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
             "refresh-gaia-hosts",
             "refresh-gaia-background",
             "build-gaia-density",
+            "publish-release",
         ],
         help="pipeline to run (default: build)",
     )
@@ -74,6 +85,9 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         action="store_true",
         default=None,
         help="emit JSON on the console (useful in CI)",
+    )
+    parser.add_argument(
+        "--build-id", default=None, help="immutable release identifier; defaults to a UTC timestamp"
     )
     return parser.parse_args(argv)
 
@@ -101,6 +115,8 @@ def main(argv: list[str] | None = None) -> int:
             refresh_gaia_background()
         elif args.command == "build-gaia-density":
             build_gaia_density()
+        elif args.command == "publish-release":
+            publish_current_release(build_id=args.build_id)
         else:
             canonical_build()
     except SystemExit as exc:

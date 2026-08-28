@@ -6,6 +6,8 @@ from pathlib import Path
 
 import polars as pl
 
+from app.loaders.batches import load_csv_batches
+
 SOURCE = "gaia_background"
 
 RAW_SCHEMA = pl.Schema(
@@ -59,14 +61,10 @@ def normalize(frame: pl.DataFrame) -> pl.DataFrame:
 
 def load(snapshot: Path) -> pl.DataFrame:
     """Read and normalize every committed Gaia background batch."""
-    batches_root = snapshot / "batches"
-    batch_paths = sorted(
-        path for path in batches_root.glob("gaia-background-*.csv") if path.is_file()
+    frame = load_csv_batches(
+        snapshot,
+        filename_pattern="gaia-background-*.csv",
+        schema=RAW_SCHEMA,
+        batch_label="Gaia background",
     )
-
-    if not batch_paths:
-        raise FileNotFoundError(f"no Gaia background batch files found in: {batches_root}")
-
-    frames = [pl.read_csv(path, schema=RAW_SCHEMA, null_values="") for path in batch_paths]
-
-    return normalize(pl.concat(frames, how="vertical"))
+    return normalize(frame)

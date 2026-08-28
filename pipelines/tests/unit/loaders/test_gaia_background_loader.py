@@ -45,7 +45,7 @@ def _write_batch(snapshot: Path, batch_number: int, rows: list[dict[str, object]
     return path
 
 
-def test_load_combines_normalizes_and_sorts_background_batches(tmp_path: Path):
+def test_load_combines_normalizes_and_sorts_background_batches(tmp_path: Path) -> None:
     snapshot = tmp_path / "current"
 
     _write_batch(snapshot, 2, [_raw_row(42)])
@@ -87,7 +87,7 @@ def test_load_combines_normalizes_and_sorts_background_batches(tmp_path: Path):
     assert frame["source"].unique().to_list() == ["gaia_background"]
 
 
-def test_invalid_background_row_is_retained_but_flagged(tmp_path: Path):
+def test_invalid_background_row_is_retained_but_flagged(tmp_path: Path) -> None:
     snapshot = tmp_path / "current"
 
     _write_batch(snapshot, 1, [_raw_row(7), _raw_row(42, ra=400.0), _raw_row(99, latitude=100.0)])
@@ -99,7 +99,7 @@ def test_invalid_background_row_is_retained_but_flagged(tmp_path: Path):
     assert frame["is_valid"].to_list() == [True, False, False]
 
 
-def test_duplicate_background_ids_are_retained_but_invalid(tmp_path: Path):
+def test_duplicate_background_ids_are_retained_but_invalid(tmp_path: Path) -> None:
     snapshot = tmp_path / "current"
 
     _write_batch(snapshot, 1, [_raw_row(7)])
@@ -112,7 +112,7 @@ def test_duplicate_background_ids_are_retained_but_invalid(tmp_path: Path):
     assert frame["is_valid"].to_list() == [False, False]
 
 
-def test_load_rejects_snapshot_without_background_batches(tmp_path: Path):
+def test_load_rejects_snapshot_without_background_batches(tmp_path: Path) -> None:
     snapshot = tmp_path / "current"
     snapshot.mkdir()
 
@@ -120,5 +120,5 @@ def test_load_rejects_snapshot_without_background_batches(tmp_path: Path):
         gaia_background.load(snapshot)
 
 
-def test_raw_schema_matches_background_query_columns():
+def test_raw_schema_matches_background_query_columns() -> None:
     assert tuple(gaia_background.RAW_SCHEMA) == GAIA_BACKGROUND_COLUMNS

@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 import polars as pl
+from logly import Logger
 
 from app.artifacts import (
     EXOPLANET_HOSTS_FILENAME,
@@ -70,7 +71,7 @@ class ExoplanetTables:
         }
 
 
-def _ctx_log(**fields: object):
+def _ctx_log(**fields: object) -> Logger:
     run = get_run()
     return bound_log(
         run_id=run.run_id if run else "-",

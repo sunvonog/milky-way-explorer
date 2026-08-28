@@ -40,3 +40,9 @@ pipelines/_inputs/**
 .idea/
 .vscode/*
 !.vscode/extensions.json
+
+# generated python coverage reports
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml

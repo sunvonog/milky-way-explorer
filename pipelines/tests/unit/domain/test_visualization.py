@@ -1,12 +1,10 @@
 import polars as pl
 import pytest
 
-from app.config import REPO_ROOT
-from app.domain.exoplanets import build_hosts, build_planets, build_systems
-from app.domain.gaia import build_gaia_host_sources
-from app.domain.visualization import HOST_VISUALIZATION_COLUMNS, build_host_visualization_records
-from app.loaders.gaia import load as load_gaia
-from app.loaders.pscomppars import load as load_pscomppars
+from app.domain.visualization import (
+    HOST_VISUALIZATION_COLUMNS,
+    build_host_visualization_records,
+)
 
 EXPECTED_COLUMNS = (
     "host_id",
@@ -29,9 +27,6 @@ EXPECTED_COLUMNS = (
     "phot_g_mean_magnitude",
     "bp_rp_color",
 )
-
-PSCOMPPARS_SNAPSHOT = REPO_ROOT / "data" / "raw" / "nasa_pscomppars" / "current" / "pscomppars.csv"
-GAIA_HOST_SNAPSHOT = REPO_ROOT / "data" / "raw" / "gaia_hosts" / "current"
 
 
 VisualizationInputs = tuple[pl.DataFrame, pl.DataFrame, pl.DataFrame]
@@ -98,20 +93,9 @@ def visualization_inputs() -> VisualizationInputs:
     return hosts, systems, gaia_sources
 
 
-@pytest.fixture(scope="module")
-def current_snapshot_records() -> pl.DataFrame:
-    exoplanet_staging = load_pscomppars(PSCOMPPARS_SNAPSHOT)
-    hosts = build_hosts(exoplanet_staging)
-    planets = build_planets(exoplanet_staging)
-    systems = build_systems(hosts, planets)
-
-    gaia_staging = load_gaia(GAIA_HOST_SNAPSHOT)
-    gaia_sources = build_gaia_host_sources(gaia_staging)
-
-    return build_host_visualization_records(hosts, systems, gaia_sources)
-
-
-def test_builds_one_visualization_record_per_host(visualization_inputs: VisualizationInputs):
+def test_builds_one_visualization_record_per_host(
+    visualization_inputs: VisualizationInputs,
+) -> None:
     hosts, systems, gaia_sources = visualization_inputs
 
     records = build_host_visualization_records(hosts, systems, gaia_sources)
@@ -121,7 +105,7 @@ def test_builds_one_visualization_record_per_host(visualization_inputs: Visualiz
     assert records["host_id"].to_list() == ["nea:host:alpha", "nea:host:beta", "nea:host:gamma"]
 
 
-def test_combines_catalogue_and_spatial_fields(visualization_inputs: VisualizationInputs):
+def test_combines_catalogue_and_spatial_fields(visualization_inputs: VisualizationInputs) -> None:
     hosts, systems, gaia_sources = visualization_inputs
 
     records = build_host_visualization_records(hosts, systems, gaia_sources)
@@ -141,7 +125,9 @@ def test_combines_catalogue_and_spatial_fields(visualization_inputs: Visualizati
     assert alpha["bp_rp_color"] == 0.8
 
 
-def test_explains_why_hosts_have_no_renderable_position(visualization_inputs: VisualizationInputs):
+def test_explains_why_hosts_have_no_renderable_position(
+    visualization_inputs: VisualizationInputs,
+) -> None:
     hosts, systems, gaia_sources = visualization_inputs
 
     records = build_host_visualization_records(hosts, systems, gaia_sources)
@@ -157,7 +143,7 @@ def test_explains_why_hosts_have_no_renderable_position(visualization_inputs: Vi
 
 def test_retains_unpositioned_hosts_with_null_spatial_fields(
     visualization_inputs: VisualizationInputs,
-):
+) -> None:
     hosts, systems, gaia_source = visualization_inputs
 
     records = build_host_visualization_records(hosts, systems, gaia_source)
@@ -169,53 +155,3 @@ def test_retains_unpositioned_hosts_with_null_spatial_fields(
     assert gamma["distance_method"] is None
     assert gamma["heliocentric_x_pc"] is None
     assert gamma["galactocentric_x_kpc"] is None
-
-
-def test_current_snapshots_have_expected_visualization_coverage(
-    current_snapshot_records: pl.DataFrame,
-):
-    records = current_snapshot_records
-
-    status_counts = {
-        row["position_status"]: row["len"]
-        for row in records.group_by("position_status").len().to_dicts()
-    }
-
-    assert records.height == 4749
-    assert records["host_id"].n_unique() == records.height
-    assert records["host_id"].is_sorted()
-
-    assert status_counts == {
-        "available": 4287,
-        "no_accepted_distance": 109,
-        "no_exact_gaia_source": 353,
-    }
-
-    assert records["planet_count"].null_count() == 0
-    assert records["archive_planet_count"].null_count() == 0
-    assert records["planet_count_matches_archive"].null_count() == 0
-
-
-def test_only_available_hosts_have_spatial_coordinates(
-    current_snapshot_records: pl.DataFrame,
-):
-    records = current_snapshot_records
-
-    coordinate_columns = (
-        "heliocentric_x_pc",
-        "heliocentric_y_pc",
-        "heliocentric_z_pc",
-        "galactocentric_x_kpc",
-        "galactocentric_y_kpc",
-        "galactocentric_z_kpc",
-    )
-
-    available = records.filter(pl.col("position_status") == "available")
-    unavailable = records.filter(pl.col("position_status") != "available")
-
-    assert available.height == 4287
-    assert unavailable.height == 462
-
-    for column in coordinate_columns:
-        assert available[column].null_count() == 0
-        assert unavailable[column].null_count() == unavailable.height

@@ -6,9 +6,15 @@ from pathlib import Path
 
 import polars as pl
 
-from app.artifacts import GAIA_DENSITY_CELLS_FILENAME, GAIA_DENSITY_VISUALIZATION_FILENAME
+from app.artifacts import (
+    GAIA_DENSITY_CELLS_FILENAME,
+    GAIA_DENSITY_VISUALIZATION_FILENAME,
+)
 from app.config import get_settings
-from app.domain.density import build_gaia_density_grid, build_gaia_density_visualization_records
+from app.domain.density import (
+    build_gaia_density_grid,
+    build_gaia_density_visualization_records,
+)
 from app.domain.gaia import build_gaia_background_sources
 from app.loaders import gaia_background as gaia_background_loader
 from app.runtime.flow import flow, task

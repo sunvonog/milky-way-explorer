@@ -10,7 +10,7 @@ from app.domain.gaia import (
 )
 
 
-def test_builds_density_ready_background_sources():
+def test_builds_density_ready_background_sources() -> None:
     staging = pl.DataFrame(
         {
             # Deliberately unsorted; source 4 is invalid and must be omitted.
@@ -70,7 +70,7 @@ def test_builds_density_ready_background_sources():
     assert actual["bp_rp_color"].to_list() == [0.5, 0.8, 1.3]
 
 
-def test_background_distance_uses_the_shared_ruwe_threshold():
+def test_background_distance_uses_the_shared_ruwe_threshold() -> None:
     staging = pl.DataFrame(
         {
             "gaia_source_id": [1, 2],
@@ -99,7 +99,7 @@ def test_background_distance_uses_the_shared_ruwe_threshold():
     ]
 
 
-def test_inverse_parallax_omits_bounds_for_invalid_parallax_error():
+def test_inverse_parallax_omits_bounds_for_invalid_parallax_error() -> None:
     frame = pl.DataFrame(
         {
             "distance_gspphot_pc": [None],
@@ -119,7 +119,7 @@ def test_inverse_parallax_omits_bounds_for_invalid_parallax_error():
     assert actual["distance_upper_pc"] is None
 
 
-def test_plans_contiguous_background_random_index_batches():
+def test_plans_contiguous_background_random_index_batches() -> None:
     actual: list[GaiaBackgroundBatch] = plan_gaia_background_batches(source_count=5, batch_size=2)
 
     assert actual == [
@@ -134,6 +134,6 @@ def test_plans_contiguous_background_random_index_batches():
 
 
 @pytest.mark.parametrize(("source_count", "batch_size"), [(0, 2), (-1, 2), (5, 0), (5, -1)])
-def test_background_batch_planner_rejects_invalid_sizes(source_count: int, batch_size: int):
+def test_background_batch_planner_rejects_invalid_sizes(source_count: int, batch_size: int) -> None:
     with pytest.raises(ValueError):
         plan_gaia_background_batches(source_count=source_count, batch_size=batch_size)

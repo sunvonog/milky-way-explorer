@@ -1,32 +1,24 @@
-from collections.abc import Iterator
 from pathlib import Path
 
 import polars as pl
 import pytest
 
-from app.artifacts import GAIA_DENSITY_CELLS_FILENAME, GAIA_DENSITY_VISUALIZATION_FILENAME
-from app.config import override_settings, reset_settings
+from app.artifacts import (
+    GAIA_DENSITY_CELLS_FILENAME,
+    GAIA_DENSITY_VISUALIZATION_FILENAME,
+)
+from app.config import override_settings
 from app.domain.density import DENSITY_COLUMNS, DENSITY_VISUALIZATION_COLUMNS
 from app.flows.density import build_gaia_density
 from app.sources.gaia import GAIA_BACKGROUND_COLUMNS
 
 
 @pytest.fixture
-def data_root(tmp_path: Path) -> Iterator[Path]:
-    reset_settings()
+def data_root(isolated_data_root: Path) -> Path:
     override_settings(
-        data_root=tmp_path,
-        log_dir=tmp_path / "logs",
-        log_level="WARNING",
-        log_color=False,
-        strict_checks=True,
-        gaia_density_grid_sizes=(2, 4),
-        gaia_density_extent_kpc=20.0,
+        strict_checks=True, gaia_density_grid_sizes=(2, 4), gaia_density_extent_kpc=20.0
     )
-
-    yield tmp_path
-
-    reset_settings()
+    return isolated_data_root
 
 
 def _background_row(
@@ -72,7 +64,7 @@ def _write_background_snapshot(data_root: Path) -> Path:
     return snapshot
 
 
-def test_build_gaia_density_publishes_all_configured_grid(data_root: Path):
+def test_build_gaia_density_publishes_all_configured_grid(data_root: Path) -> None:
     _write_background_snapshot(data_root)
 
     path = build_gaia_density()
@@ -100,6 +92,6 @@ def test_build_gaia_density_publishes_all_configured_grid(data_root: Path):
     assert visualization["cell_size_kpc"].unique().sort().to_list() == [10.0, 20.0]
 
 
-def test_build_gaia_density_requires_committed_snapshot(data_root: Path):
+def test_build_gaia_density_requires_committed_snapshot(data_root: Path) -> None:
     with pytest.raises(FileNotFoundError, match="Gaia background snapshot"):
         build_gaia_density()

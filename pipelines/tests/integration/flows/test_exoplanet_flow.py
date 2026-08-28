@@ -4,7 +4,7 @@ from pathlib import Path
 import polars as pl
 import pytest
 
-from app.config import REPO_ROOT, override_settings, reset_settings
+from app.config import REPO_ROOT
 from app.flows.exoplanets import (
     OUTPUT_FILENAMES,
     SNAPSHOT_FILENAME,
@@ -35,26 +35,20 @@ EXPECTED_ROWS = {
 
 
 @pytest.fixture
-def data_root(tmp_path: Path):
-    reset_settings()
-    override_settings(
-        data_root=tmp_path, log_dir=tmp_path / "logs", log_level="WARNING", log_color=False
-    )
-
-    destination = snapshot_dir(tmp_path / "raw", SOURCE)
+def data_root(isolated_data_root: Path) -> Path:
+    destination = snapshot_dir(isolated_data_root / "raw", SOURCE)
     destination.mkdir(parents=True)
 
     shutil.copy2(SOURCE_SNAPSHOT, destination / SNAPSHOT_FILENAME)
 
-    yield tmp_path
-    reset_settings()
+    return isolated_data_root
 
 
-def test_output_filenames_are_stable():
+def test_output_filenames_are_stable() -> None:
     assert OUTPUT_FILENAMES == EXPECTED_FILENAMES
 
 
-def test_build_writes_expected_parquet_files(data_root: Path):
+def test_build_writes_expected_parquet_files(data_root: Path) -> None:
     paths = build_exoplanets()
 
     assert set(paths) == set(OUTPUT_FILENAMES)
@@ -67,7 +61,7 @@ def test_build_writes_expected_parquet_files(data_root: Path):
         assert frame.height == EXPECTED_ROWS[key]
 
 
-def test_published_foreign_keys_are_valid(data_root: Path):
+def test_published_foreign_keys_are_valid(data_root: Path) -> None:
     paths = build_exoplanets()
 
     planets = pl.read_parquet(paths["planets"])

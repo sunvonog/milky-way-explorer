@@ -7,7 +7,7 @@ from app.sources.nasa_exoplanet_archive import (
 )
 
 
-def test_query_selects_explicit_columns():
+def test_query_selects_explicit_columns() -> None:
     """Test query selects explicit columns."""
     query = pscomppars_query()
 
@@ -18,11 +18,11 @@ def test_query_selects_explicit_columns():
     assert query.endswith("FROM pscomppars ORDER BY pl_name")
 
 
-def test_query_columns_are_unique():
+def test_query_columns_are_unique() -> None:
     assert len(PSCOMPPARS_COLUMNS) == len(set(PSCOMPPARS_COLUMNS))
 
 
-def test_url_contains_encoded_query_and_csv_format():
+def test_url_contains_encoded_query_and_csv_format() -> None:
     parsed = urlparse(pscomppars_url())
     parameters = parse_qs(parsed.query)
 
@@ -32,7 +32,7 @@ def test_url_contains_encoded_query_and_csv_format():
     assert parameters["query"] == [pscomppars_query()]
 
 
-def test_required_scientific_columns_are_present():
+def test_required_scientific_columns_are_present() -> None:
     required = {
         "sy_snum",
         "sy_pnum",

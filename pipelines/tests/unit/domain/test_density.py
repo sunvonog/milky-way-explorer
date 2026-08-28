@@ -9,7 +9,7 @@ from app.domain.density import (
 )
 
 
-def test_aggregates_sources_into_non_empty_cell():
+def test_aggregates_sources_into_non_empty_cell() -> None:
     sources = pl.DataFrame(
         {
             "galactocentric_x_kpc": [-1.8, -1.1, 0.2, 0.7],
@@ -41,7 +41,7 @@ def test_aggregates_sources_into_non_empty_cell():
     assert rows[1]["weighted_brightness"] == pytest.approx(10 ** (-0.4 * 12.0), rel=1e-6)
 
 
-def test_uses_half_open_grid_boundaries_and_ignores_unpositioned_sources():
+def test_uses_half_open_grid_boundaries_and_ignores_unpositioned_sources() -> None:
     sources = pl.DataFrame(
         {
             "galactocentric_x_kpc": [-2.0, 1.999, 2.0, -2.001, None, 0.0],
@@ -60,7 +60,7 @@ def test_uses_half_open_grid_boundaries_and_ignores_unpositioned_sources():
     ]
 
 
-def test_publishes_compact_density_schema():
+def test_publishes_compact_density_schema() -> None:
     sources = pl.DataFrame(
         {
             "galactocentric_x_kpc": [0.0],
@@ -87,18 +87,18 @@ def test_publishes_compact_density_schema():
 
 
 @pytest.mark.parametrize("grid_size", [0, -1])
-def test_rejects_non_positive_grid_size(grid_size: int):
+def test_rejects_non_positive_grid_size(grid_size: int) -> None:
     with pytest.raises(ValueError, match="grid_size must be positive"):
         build_gaia_density_grid(pl.DataFrame(), grid_size=grid_size, extent_kpc=20.0)
 
 
 @pytest.mark.parametrize("extent_kpc", [0.0, -1.0])
-def test_rejects_non_positive_extent(extent_kpc: float):
+def test_rejects_non_positive_extent(extent_kpc: float) -> None:
     with pytest.raises(ValueError, match="extent_kpc must be positive"):
         build_gaia_density_grid(pl.DataFrame(), grid_size=128, extent_kpc=extent_kpc)
 
 
-def test_density_visualization_adds_physical_cell_geometry():
+def test_density_visualization_adds_physical_cell_geometry() -> None:
     cells = pl.DataFrame(
         {
             "grid_level": [4, 4],

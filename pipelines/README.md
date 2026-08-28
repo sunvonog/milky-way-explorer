@@ -1,7 +1,8 @@
 # Pipelines
 
 Offline data pipelines for Milky Way Explorer. Transforms vendored naming
-catalogues and committed external-source snapshots into canonical Parquet tables.
+catalogues and committed external-source snapshots into canonical Parquet tables
+and frontend Arrow files, then publishes immutable releases for the backend.
 No orchestrator server — flows are plain Python functions with Prefect-style
 `@flow` / `@task` decorators for run identity, timing, retries, and structured
 logging.
@@ -10,7 +11,7 @@ logging.
 
 ```bash
 cd pipelines
-uv sync --all-groups
+uv sync --locked --all-groups
 cp .env.example .env   # optional; defaults work from the repo root
 ```
 
@@ -23,17 +24,57 @@ uv run python -m app.main --log-level DEBUG
 uv run python -m app.main --log-json           # JSON on the console (CI)
 uv run python -m app.main refresh-snapshots    # maintainer-only naming snapshot refresh
 uv run python -m app.main refresh-pscomppars   # maintainer-only NASA PSCompPars refresh
-uv run python -m app.main refresh-gaia-hosts   # maintainer-only Gaia retrieval refresh
+uv run python -m app.main refresh-gaia-hosts   # maintainer-only Gaia host retrieval refresh
+uv run python -m app.main refresh-gaia-background  # maintainer-only Gaia background refresh
+uv run python -m app.main build-gaia-density   # density Parquet + milky-way-density.arrow
+uv run python -m app.main publish-release --build-id local-001
 ```
 
-`canonical_build` builds the identity tables, PSCompPars domain tables, the Gaia
-host-ID retrieval manifest, and `gaia_host_sources.parquet`. It consumes
-committed snapshots and does not contact external services.
+### Canonical build vs release
 
-`refresh-snapshots`, `refresh-pscomppars`, and `refresh-gaia-hosts` are
-maintainer-only operations and are intentionally **not** part of the canonical
-build. They replace `data/raw/<source>/current/`. Review and commit the snapshot
-changes before rebuilding.
+`canonical_build` (default command / `build`) is offline and does **not**
+contact external services. It runs:
+
+1. identity tables (`stars`, `alias`, host links, review sinks);
+2. PSCompPars domain tables;
+3. Gaia host-ID retrieval manifest;
+4. `gaia_host_sources.parquet`;
+5. host visualization → `data/frontend/exoplanet_hosts.arrow`.
+
+It does **not** run `build-gaia-density` or `publish-release`.
+
+`refresh-snapshots`, `refresh-pscomppars`, `refresh-gaia-hosts`, and
+`refresh-gaia-background` are maintainer-only operations. They replace
+`data/raw/<source>/current/`. Review and commit vendored snapshot changes
+before rebuilding.
+
+### Density and publish
+
+```bash
+# Requires data/raw/gaia_background/current/ (not vendored in git)
+uv run python -m app.main build-gaia-density
+uv run python -m app.main publish-release --build-id local-001
+```
+
+`publish-release` validates the allowlist, copies artifacts into
+`data/builds/{build_id}/`, writes `manifest.json`, and atomically updates
+`data/builds/current.json`. The backend serves only that published build — see
+[../docs/DEPLOYMENT.md](../docs/DEPLOYMENT.md).
+
+**Release allowlist:**
+
+| Relative path | Produced by |
+| --- | --- |
+| `processed/stars.parquet` | identity |
+| `processed/alias.parquet` | identity |
+| `frontend/exoplanet_hosts.arrow` | canonical build (host visualization) |
+| `frontend/milky-way-density.arrow` | `build-gaia-density` |
+
+Six source snapshots must exist under `data/raw/*/current/snapshot.json`
+(including `gaia_background`). Naming catalogues, PSCompPars, and Gaia hosts are
+vendored via `.gitignore` exceptions; the Gaia background snapshot is
+maintainer-generated and must be refreshed or otherwise supplied before a full
+release.
 
 ## Configuration
 
@@ -42,13 +83,19 @@ Settings live in [`app/config.py`](app/config.py) (`pydantic-settings`,
 
 | Variable | Default | Meaning |
 |---|---|---|
-| `MWE_DATA_ROOT` | `<repo>/data` | Root for raw / processed / logs |
+| `MWE_DATA_ROOT` | `<repo>/data` | Root for raw / processed / frontend / builds / logs |
 | `MWE_LOG_LEVEL` | `INFO` | Console minimum level |
 | `MWE_LOG_JSON` | `false` | JSON on the console |
 | `MWE_LOG_COLOR` | `true` | Coloured console output |
 | `MWE_LOG_DIR` | `<data_root>/logs` | Override log directory |
 | `MWE_LOG_RETENTION` | `20` | Run log files kept per flow |
 | `MWE_STRICT_CHECKS` | `false` | Raise when expectations miss |
+| `MWE_GAIA_BACKGROUND_SOURCE_COUNT` | `1000000` | `random_index` candidates for background refresh |
+| `MWE_GAIA_BACKGROUND_BATCH_SIZE` | `100000` | Async batch size for background refresh |
+| `MWE_GAIA_DENSITY_EXTENT_KPC` | `20.0` | Half-extent of the Galactocentric density grid |
+
+Density grid resolutions default to `(128,)` in `app/config.py`
+(`gaia_density_grid_sizes`) and are not required in `.env`.
 
 CLI flags (`--strict`, `--log-level`, `--log-json`) override env / `.env`.
 
@@ -68,7 +115,10 @@ use logly's `bind()` — kwargs to `info()` are format-string substitutions only
 app/
 ├── main.py                 # CLI and canonical-build entry point
 ├── config.py               # pydantic settings
+├── release.py              # immutable release allowlist and publication
+├── artifacts.py            # processed / frontend filenames
 ├── domain/                 # pure transformations and domain contracts
+│   ├── density.py
 │   ├── exoplanets.py
 │   ├── gaia.py
 │   ├── identity.py
@@ -88,7 +138,21 @@ tests/
     ├── flows/
     └── test_main.py
 ```
-    
+
+### Identity outputs
+
+`build-identity` (part of the canonical build) reads vendored naming snapshots
+and writes under `data/processed/`:
+
+| File | Contents |
+|---|---|
+| `stars.parquet` | Canonical named stars for search |
+| `alias.parquet` | Alternate designations |
+| `exoplanet_host_links.parquet` | Links from hosts into the identity catalogue |
+| review sinks | Ambiguous / unresolved naming rows |
+
+Exact schemas: [../docs/DATASET.md](../docs/DATASET.md).
+
 ### PSCompPars outputs
 
 `build-exoplanets` reads `data/raw/nasa_pscomppars/current/pscomppars.csv` and
@@ -118,6 +182,20 @@ All paths are under `data/processed/`.
 
 Current expectations: 4,396 sources; 109 without an accepted distance (null spatial coordinates).
 
+### Density outputs
+
+`refresh-gaia-background` writes `data/raw/gaia_background/current/`.
+`build-gaia-density` reads that snapshot and writes:
+
+| File | Contents |
+|---|---|
+| `gaia_density_cells.parquet` | Occupied Galactocentric density cells |
+| `frontend/milky-way-density.arrow` | Visualization Arrow with cell geometry |
+
+Host visualization (`build_host_visualization`, part of the canonical build)
+additionally writes `frontend/exoplanet_hosts.arrow` with position-status
+breakdown (`available` / `no_accepted_distance` / `no_exact_gaia_source`).
+
 ## Adding a flow
 
 1. Put deterministic business logic in `app/domain/<subject>.py`.
@@ -125,8 +203,9 @@ Current expectations: 4,396 sources; 109 without an accepted distance (null spat
    `app/sources/`.
 3. Wrap the operations with `@task` in `app/flows/<subject>.py`.
 4. Compose tasks under a named `@flow`.
-5. Add offline publication flows to `canonical_build()`. External refreshes
-   should instead receive an explicit maintainer-only CLI command.
+5. Add offline publication flows to `canonical_build()` only when they belong
+   in every default build. External refreshes and optional density/release
+   steps should receive explicit CLI commands.
 6. Mirror the implementation under `tests/unit/` and `tests/integration/`.
 
 For tasks repeated per source or batch, pass `key=` so run summaries identify
@@ -135,9 +214,11 @@ each instance (`resolve_snapshot[iau_csn]`, `fetch_chunk[12]`, and similar).
 ## Tests
 
 ```bash
-uv run pytest tests/unit
-uv run pytest tests/integration
+uv run pytest --cov=app --cov-report=term-missing
 uv run ruff check .
 uv run ruff format --check .
 uv run ty check
 ```
+
+CI uses the same commands with `uv sync --locked --all-groups` and an 85%
+coverage gate. Pipelines CI also triggers on `data/raw/**` changes.
