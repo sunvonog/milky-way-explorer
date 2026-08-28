@@ -1,4 +1,5 @@
-from collections.abc import Iterator
+import json
+from collections.abc import Callable, Iterator
 from pathlib import Path
 
 import polars as pl
@@ -32,9 +33,9 @@ def write_search_tables(
 
 
 @pytest.fixture
-def search_dataset(tmp_path: Path) -> Path:
+def search_dataset(published_build: Path) -> Path:
     """Canned stars/aliases: Sirius (exact + prefix) and Sirona (prefix rival)."""
-    processed = tmp_path / "processed"
+    processed = published_build / "processed"
     write_search_tables(
         processed,
         stars=[
@@ -76,3 +77,32 @@ def search_dataset(tmp_path: Path) -> Path:
         ],
     )
     return processed
+
+
+@pytest.fixture
+def publish_build(tmp_path: Path) -> Callable[[str], Path]:
+    """Publish a minimal immutable build and point current.json at it."""
+
+    def publish(build_id: str) -> Path:
+        build_root = tmp_path / "builds" / build_id
+        build_root.mkdir(parents=True, exist_ok=True)
+
+        manifest = {
+            "build_id": build_id,
+            "created_at": "2026-08-28T12:00:00Z",
+            "source_snapshots": {"gaia": "DR3"},
+            "row_counts": {},
+        }
+        manifest_json = json.dumps(manifest)
+
+        (build_root / "manifest.json").write_text(manifest_json, encoding="utf-8")
+        (tmp_path / "builds" / "current.json").write_text(manifest_json, encoding="utf-8")
+
+        return build_root
+
+    return publish
+
+
+@pytest.fixture
+def published_build(publish_build: Callable[[str], Path]) -> Path:
+    return publish_build("test-build")

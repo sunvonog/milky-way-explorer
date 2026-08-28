@@ -1,8 +1,7 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter
 
-from app.api.deps import SettingsDep
+from app.api.deps import PublishedBuildDep
 from app.schemas.meta import BuildResponse, HealthResponse
-from app.services.builds import read_current_build
 
 router = APIRouter(tags=["meta"])
 
@@ -15,10 +14,8 @@ def health() -> HealthResponse:
 
 
 @router.get("/build", response_model=BuildResponse)
-def build(settings: SettingsDep) -> BuildResponse:
-    info = read_current_build(settings.current_pointer)
-    if info is None:
-        raise HTTPException(status_code=503, detail="no published build")
+def build(published_build: PublishedBuildDep) -> BuildResponse:
+    info = published_build.info
 
     return BuildResponse(
         build_id=info.build_id,
