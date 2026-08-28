@@ -6,10 +6,10 @@ This document defines the architecture for the fresh Milky Way & Exoplanet Explo
 
 The system is designed around four realities:
 
-1. Gaia DR3 is far too large to download, store, or render in full on the current server.
+1. Gaia DR3 is far too large to download, store, or render in full on a modest production host.
 2. A top-down Galactic reconstruction requires distance estimates and careful quality handling.
 3. Familiar star names exist for only a small, strongly selected subset of stars.
-4. The production server has 4 vCPU, 8 GB RAM, and 80 GB local disk.
+4. A representative target deployment has 4 vCPU, 8 GB RAM, and 80 GB local disk.
 
 The architecture therefore separates:
 
@@ -72,16 +72,10 @@ The following operations happen offline:
 
 ### 2.6 Immutable data builds
 
-Every public dataset build has:
-
-- source release or snapshot;
-- query text;
-- query job IDs;
-- checksums;
-- row counts;
-- transformation version;
-- build ID;
-- generated file list.
+The implemented v1 manifest records the build identity, source-snapshot
+checksums, and artifact checksums, sizes, and row counts. Query text, Gaia job
+IDs, transformation versions, and the Galactocentric parameter set remain
+planned provenance fields.
 
 ## 3. System context
 
@@ -116,16 +110,18 @@ flowchart LR
 
 Responsibilities:
 
-- load `exoplanet_hosts.arrow` from the configured data base URL;
-- validate Arrow rows into typed host visualization records;
-- project heliocentric and Galactocentric positions with an equal physical scale;
-- render an interactive SVG scatter plot of exoplanet hosts.
+- load `milky-way-density.arrow` and `exoplanet_hosts.arrow` from the
+  configured data base URL (both required);
+- validate Arrow rows into typed density and host visualization records;
+- project heliocentric and Galactocentric host positions with an equal
+  physical scale;
+- render side-by-side SVG plots: Gaia density grid and exoplanet-host scatter.
 
 Module boundaries:
 
 ```text
 domain/          scientific types, coordinates, frame definitions
-data/            Arrow transport and validation
+data/            Arrow transport and validation (host + density)
 visualization/   pure D3 plot-model construction
 components/      Vue SVG presentation and interaction state
 ```
@@ -151,13 +147,13 @@ package. See [../frontend/README.md](../frontend/README.md).
 
 Responsibilities:
 
-- render Galactic density layers;
+- render Galactic density layers with WebGL / deck.gl;
 - render named and exoplanet-host markers;
 - maintain camera and projection state;
 - animate transitions;
 - perform GPU picking;
 - load metadata after selection;
-- search hosts and planets;
+- search hosts and planets from the UI;
 - expose quality and provenance labels.
 
 Planned stack additions:
@@ -168,14 +164,18 @@ Planned stack additions:
 
 ### 4.2 FastAPI service
 
-Responsibilities:
+Implemented responsibilities:
 
 - health and build-status endpoints;
-- source and system detail endpoints;
-- planet and host search;
-- dataset manifests;
-- small filtered queries;
-- optional signed or redirected static-file responses.
+- star / alias search over published identity Parquet (`GET /api/v1/search`);
+- allowlisted Arrow file responses from the active immutable build
+  (`/data/exoplanet_hosts.arrow`, `/data/milky-way-density.arrow`).
+
+Planned responsibilities:
+
+- source, system, and planet detail endpoints;
+- exoplanet / planet name search beyond the identity catalogue;
+- optional signed or redirected static-file responses behind a reverse proxy.
 
 The API should not parse the entire render catalogue at startup.
 
@@ -212,76 +212,87 @@ Future responsibilities:
 
 ### 4.5 Gaia background pipeline
 
-Responsibilities:
+Implemented responsibilities:
 
-- retrieve manageable Gaia chunks;
-- transform sources into Galactocentric coordinates;
-- aggregate sources into density cells;
-- discard unnecessary source-level temporary data after a successful build;
-- produce several grid resolutions if useful.
+- retrieve manageable Gaia chunks via `refresh-gaia-background`
+  (default: 1,000,000 `random_index` candidates in 100,000-row CSV batches);
+- transform accepted sources into Galactocentric coordinates;
+- aggregate sources into density cells (`build-gaia-density`);
+- write `gaia_density_cells.parquet` and `frontend/milky-way-density.arrow`;
+- discard unnecessary source-level temporary data after a successful build.
 
-The first implementation may use the existing 10,000-source sample. It is a pipeline-validation dataset, not the final density model.
+The pipeline may produce several grid resolutions later; the current default is
+a single 128 × 128 grid over a ±20 kpc Galactocentric extent. Commands and
+snapshot policy: [../pipelines/README.md](../pipelines/README.md).
 
 ### 4.6 Metadata repository
 
-DuckDB queries Parquet directly.
+DuckDB queries Parquet directly from the **published** build.
 
-Primary tables:
+Primary tables used today:
 
 ```text
+stars                  # identity catalogue (search)
+alias                  # identity aliases (search)
 exoplanet_hosts
 exoplanet_systems
 exoplanets
 gaia_host_sources
-named_sources
 gaia_density_cells
-dataset_builds
+exoplanet_host_links
 ```
 
-Review tables remain analytical side channels (`review_*`) and are not required for the public API.
+Only `stars.parquet` and `alias.parquet` are copied into the immutable release
+allowlist for search. Review tables remain analytical side channels
+(`review_*`) and are not required for the public API.
 
-### 4.7 Static data delivery
+### 4.7 Release publication
 
-Static files should be served by Caddy or Nginx instead of FastAPI when possible.
+Mutable pipeline outputs under `data/processed/` and `data/frontend/` are not
+served directly. `publish-release` copies the release allowlist into
+`data/builds/{build_id}/`, writes `manifest.json`, and atomically updates
+`data/builds/current.json`. See [DEPLOYMENT.md](DEPLOYMENT.md).
 
-Examples:
+### 4.8 Static data delivery
+
+Static files should be served by Caddy or Nginx instead of FastAPI when
+possible (production target). The future reverse-proxy URL contract for active
+and build-addressed artifacts is not decided yet.
+
+In local development FastAPI resolves `data/builds/current.json` and serves
+allowlisted Arrow files from that build at:
 
 ```text
-/data/builds/{build_id}/milky-way-density.arrow
-/data/builds/{build_id}/exoplanet_hosts.arrow
-/data/builds/{build_id}/manifest.json
+GET /data/exoplanet_hosts.arrow
+GET /data/milky-way-density.arrow
 ```
-
-In local development the current host artifact is also served directly by
-FastAPI at `/data/exoplanet_hosts.arrow` from `data/frontend/`.
 
 ## 5. Runtime request model
 
 ### Current prototype
 
 ```text
+GET /api/v1/health
+GET /api/v1/build
+GET /api/v1/search?q=TRAPPIST-1
 GET /data/exoplanet_hosts.arrow
+GET /data/milky-way-density.arrow
 ```
+
+`/api/v1/search` queries IAU stars and aliases from the published build. The
+Vue prototype does not call it yet.
 
 ### Target MVP — initial page load
 
-```text
-GET /data/current/manifest.json
-GET /data/current/milky-way-density.arrow
-GET /data/current/exoplanet_hosts.arrow
-```
+The future reverse-proxy URL contract for manifests and immutable artifacts is
+undecided. For build metadata and visualization artifacts, the supported
+contract remains `GET /api/v1/build` and `GET /data/<artifact>`.
 
 ### Target MVP — object selection
 
 ```text
 GET /api/v1/sources/{gaia_source_id}
 GET /api/v1/systems/{host_id}
-```
-
-### Target MVP — search
-
-```text
-GET /api/v1/search?q=TRAPPIST-1
 ```
 
 ### Target MVP — planet details
@@ -294,10 +305,11 @@ GET /api/v1/planets/{planet_id}
 
 ### Current prototype
 
-The implemented host view is a Vue-managed SVG scatter plot. D3 builds a pure
-plot model (equal physical scale, ticks, reference points, planet-count radii);
-the component renders circles and frame controls. Hosts without positions for
-the selected frame are retained in the dataset but omitted from the plot.
+The implemented views are Vue-managed SVG plots: a Gaia density-grid panel and
+an exoplanet-host scatter panel. D3 builds pure plot models (equal physical
+scale, ticks, reference points, cell geometry, planet-count radii); components
+render shapes and frame controls. Hosts without positions for the selected
+frame are retained in the dataset but omitted from the host plot.
 
 ### Target MVP layers
 
@@ -346,9 +358,10 @@ upgrades do not silently change positions.
 
 ## 8. Name architecture
 
-The render file does not repeat full names for every row.
+The current host Arrow file stores `host_name` directly on each record. A
+separate indexed name table remains planned for larger render datasets.
 
-Use:
+Planned shape:
 
 ```text
 host render record
@@ -408,6 +421,9 @@ A future attached volume or object store is required before storing a large mult
 
 ## 10. Deployment topology
 
+Planned production layout (not implemented in-repo yet — no Docker, Compose, or
+deploy workflow). Local release and serving: [DEPLOYMENT.md](DEPLOYMENT.md).
+
 ```mermaid
 flowchart TB
     Internet
@@ -426,20 +442,22 @@ flowchart TB
 
 ## 11. Scalability path
 
-### Prototype
+### Prototype (current)
 
-- 10,000-source Gaia validation sample;
+- chunked Gaia background sample (1M `random_index` candidates);
 - complete exoplanet catalogue;
 - exact Gaia records for matched hosts;
-- one coarse density grid.
+- one coarse density grid + dual SVG visualization;
+- immutable `publish-release` builds;
+- GitHub Actions CI (lint / type / test / frontend build).
 
 ### Public MVP
 
-- chunked Gaia background ingestion;
 - multiple density resolutions;
-- complete matched host layer;
-- compact Arrow delivery;
-- GitHub Actions deployment.
+- WebGL / deck.gl rendering;
+- UI search and detail panels;
+- compact Arrow delivery behind a reverse proxy;
+- GitHub Actions SSH deployment.
 
 ### Later
 

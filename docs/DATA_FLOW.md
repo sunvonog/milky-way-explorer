@@ -43,8 +43,27 @@ flowchart TD
     API --> Web
 ```
 
-The current browser prototype is a Vue SVG + D3 host scatter plot. WebGL /
-deck.gl rendering remains the planned public MVP path.
+The current browser prototype is a Vue SVG + D3 dual panel (density grid +
+host scatter). WebGL / deck.gl rendering remains the planned public MVP path.
+
+## 2.0 Identity ingestion
+
+The canonical build starts with offline identity resolution from vendored
+naming snapshots (`iau_csn`, `wgsn_faints`, `exoplanet_names`):
+
+```text
+python -m app.main refresh-snapshots   # maintainer-only
+    → data/raw/<source>/current/
+
+canonical build → build-identity
+    → stars.parquet
+    → alias.parquet
+    → exoplanet_host_links.parquet
+    → review_dropped_stars.parquet
+    → review_unmatched_hosts.parquet
+```
+
+These identity tables power star/alias search in the published release.
 
 ## 2. Exoplanet-first ingestion
 
@@ -56,7 +75,7 @@ is an explicit maintainer action and is not part of the normal build.
 A maintainer refreshes the snapshot with:
 
 ```text
-python -m app.main refresh-pscomppars
+cd pipelines && uv run python -m app.main refresh-pscomppars
     → NASA TAP query
     → data/raw/nasa_pscomppars/current/pscomppars.csv
     → data/raw/nasa_pscomppars/current/snapshot.json
@@ -235,21 +254,26 @@ The background pipeline does not need readable names or full source details.
 
 Its purpose is to create density cells for the Milky Way overview.
 
-### 4.1 Exploratory Gaia input
+### 4.1 Current Gaia background sample
 
-The initial 10,000-candidate retrieval produced 2,740 accepted sources
-across 334 occupied density cells. This validated the complete path from
-Gaia retrieval through the frontend visualization.
+Historical note: an early 10,000-candidate retrieval produced 2,740 accepted
+sources across 334 occupied density cells and validated the density path.
 
-The current repeatable sample scans 1,000,000 Gaia `random_index`
-candidates in ten batches of 100,000. After applying the distance policy,
-it produces:
+The implemented maintainer path is `refresh-gaia-background` followed by
+`build-gaia-density`. The current repeatable sample scans 1,000,000 Gaia
+`random_index` candidates in ten batches of 100,000 (async CSV downloads).
+After applying the distance policy, a representative local run produced:
 
 - 274,685 accepted sources;
 - 260,481 GSP-Phot distances;
 - 14,204 qualified inverse-parallax distances;
 - 274,681 sources inside the fixed density-grid extent;
 - 2,222 occupied cells in the 128 × 128 grid.
+
+Those counts are run-specific observations for the current snapshot, not hard
+code expectations. The `gaia_background` snapshot is **not** vendored in git;
+fresh clones need a maintainer refresh (or an otherwise supplied snapshot)
+before density/release.
 
 This density represents the selected Gaia observations, not an unbiased
 estimate of the intrinsic Milky Way stellar density. Magnitude limits,
@@ -258,7 +282,8 @@ a strong selection bias toward the solar neighbourhood.
 
 ### 4.2 Production retrieval
 
-Larger Gaia inputs are retrieved through multiple asynchronous jobs rather than one monolithic query.
+Larger Gaia inputs are retrieved through multiple asynchronous jobs rather than
+one monolithic query.
 
 Possible chunk keys:
 
@@ -267,16 +292,9 @@ Possible chunk keys:
 - HEALPix/source-ID prefixes;
 - bounded sky regions.
 
-Each chunk is:
-
-1. submitted asynchronously;
-2. downloaded directly to a file;
-3. validated;
-4. transformed;
-5. aggregated;
-6. marked complete in a build journal.
-
-The pipeline can resume without repeating successful chunks.
+The current refresh is atomic but not resumable: if one batch fails, the staged
+snapshot is discarded and a later refresh starts again. Persisted batch
+journals and incremental aggregation are planned for larger retrievals.
 
 ## 5. Validation flow
 
@@ -356,15 +374,16 @@ units = kiloparsecs
 parameter set = v4.0
 ```
 
-Freezing `v4.0` prevents ambient Astropy default changes from silently
-moving published positions. The selected parameter set is written to the
-dataset manifest.
+The implemented v1 manifest records the build identity, source-snapshot
+checksums, and artifact checksums, sizes, and row counts. Query text, Gaia job
+IDs, transformation versions, and the Galactocentric parameter set remain
+planned provenance fields.
 
 ## 8. Density aggregation
 
-The Gaia background is converted into compact cells.
+The Gaia background is converted into compact cells via `build-gaia-density`.
 
-Example cell schema:
+Processed cell schema (`gaia_density_cells.parquet`):
 
 ```text
 grid_level
@@ -373,18 +392,27 @@ cell_y
 source_count
 weighted_brightness
 mean_bp_rp
-mean_distance_quality
+```
+
+Visualization Arrow (`frontend/milky-way-density.arrow`) adds cell geometry:
+
+```text
+cell_center_x_kpc
+cell_center_y_kpc
+cell_size_kpc
 ```
 
 The pipeline may produce multiple resolutions:
 
 ```text
-128 × 128
+128 × 128   # current default
 256 × 256
 512 × 512
 ```
 
-Only non-empty cells are exported.
+Only non-empty cells are exported. Host visualization additionally records
+position-status counts on `exoplanet_hosts.arrow` (current expectations:
+4287 available, 109 no accepted distance, 353 no exact Gaia source).
 
 ## 9. Name selection
 
@@ -397,7 +425,8 @@ NASA hostname
     → Gaia DR3 designation
 ```
 
-Names are stored in a separate string table and referenced by integer index from the compact render file.
+The current host Arrow file stores `host_name` directly on each record. A
+separate indexed name table remains planned for larger render datasets.
 
 ### 9.1 Identity naming catalogues
 
@@ -420,46 +449,57 @@ That row is a redirect stub, not a second physical star:
 ## 10. Build publication
 
 A dataset build is published only after all mandatory validation checks pass.
+The concrete CLI is:
 
 ```text
-processed Parquet
-    + frontend Arrow files
-    + manifest JSON
-    + checksums
-    → atomic current-build switch
+cd pipelines && uv run python -m app.main publish-release [--build-id ID]
 ```
 
-The last valid build remains active if a new build fails.
+```text
+mutable data/processed/*.parquet (allowlisted)
+    + mutable data/frontend/*.arrow (allowlisted)
+    + source snapshot checksums
+    → data/builds/{build_id}/… + manifest.json
+    → atomic replace of data/builds/current.json
+```
+
+Allowlist and semantics: [DEPLOYMENT.md](DEPLOYMENT.md). The last valid build
+remains active if a new publish fails before the pointer switch.
 
 ## 11. Runtime frontend flow
 
 ### Current prototype (implemented)
 
-Local development publishes `data/frontend/exoplanet_hosts.arrow` from the
-pipelines visualization flow. FastAPI serves that file at
-`/data/exoplanet_hosts.arrow`. The Vue app fetches it via `VITE_DATA_BASE_URL`,
-validates each row, builds a pure D3 plot model, and renders SVG circles.
+Pipelines stage Arrow files under `data/frontend/`. After `publish-release`,
+FastAPI resolves `data/builds/current.json` and serves both artifacts from the
+immutable build. The Vue app fetches them via `VITE_DATA_BASE_URL`, validates
+each row, builds pure D3 plot models, and renders SVG panels.
 
 ```mermaid
 sequenceDiagram
     participant B as Browser
     participant A as FastAPI
     participant F as Frontend data layer
-    participant V as Visualization model
+    participant V as Visualization models
 
     B->>A: GET /data/exoplanet_hosts.arrow
-    A-->>B: Arrow IPC bytes
-    B->>F: decodeHostVisualization
-    F-->>B: HostVisualizationRecord list
-    B->>V: buildHostScatterPlotModel
-    V-->>B: Screen positions, ticks, radii
-    B->>B: Render Vue-managed SVG
+    B->>A: GET /data/milky-way-density.arrow
+    A-->>B: Arrow IPC bytes from published build
+    B->>F: decodeHostVisualization + decodeDensityVisualization
+    F-->>B: Host and density record lists
+    B->>V: buildHostScatterPlotModel + density plot model
+    V-->>B: Screen positions, ticks, cell geometry
+    B->>B: Render Vue-managed SVG panels
 ```
 
 Hosts without an accepted distance or exact Gaia source remain in the payload
-but are omitted from the selected spatial view.
+but are omitted from the selected spatial view. Missing either Arrow file fails
+the page load.
 
 ### Target MVP load (planned)
+
+The future reverse-proxy URL contract for manifests and immutable artifacts is
+undecided.
 
 ```mermaid
 sequenceDiagram
@@ -497,16 +537,16 @@ sequenceDiagram
 
 ### Browser
 
-- immutable Arrow files cached by build ID (planned; the prototype fetches a
-  single development artifact);
+- immutable Arrow files addressed by build ID (long cache in production);
+- prototype fetches both development artifacts through FastAPI `/data/*`;
 - selected details cached in memory;
 - stale requests aborted;
 - old GPU buffers released after view changes (planned WebGL path).
 
 ### Reverse proxy
 
-- long cache lifetime for build-addressed static files;
-- no-cache or short cache for `current/manifest.json`;
+- define the URL contract before assigning mutable-pointer and immutable-build
+  cache policies;
 - compression enabled;
 - range requests supported when useful.
 
@@ -520,10 +560,11 @@ sequenceDiagram
 
 ### Gaia query failure
 
-- persist the Gaia job ID and error;
+- include the Gaia job ID in failure diagnostics; returned job IDs are not yet
+  persisted in snapshot manifests;
 - retry with bounded backoff;
 - reduce batch size if appropriate;
-- do not discard successful chunks;
+- expect a failed refresh to discard staged chunks and restart;
 - do not publish a partial build as complete.
 
 ### Missing Gaia host record

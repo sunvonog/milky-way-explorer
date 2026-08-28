@@ -1,16 +1,18 @@
 # Milky Way & Exoplanet Explorer
 
-An interactive 2D data-visualization project for exploring the Milky Way, named stellar objects, and confirmed exoplanet systems.
+An interactive 2D data-visualization project for exploring the Milky Way, named
+stellar objects, and confirmed exoplanet systems.
 
-This repository is a **fresh project start**. It intentionally does not preserve earlier implementation choices. The new design keeps only the validated learnings:
+This monorepo contains offline pipelines, a FastAPI metadata service, and a Vue
+prototype. Design constraints carried forward from earlier experiments:
 
-- WebGL rendering can handle at least 100,000 points on the development machine.
+- WebGL rendering can handle at least 100,000 points in local benchmark runs.
 - A browser should never receive the full Gaia catalogue.
 - Random Gaia samples are useful for benchmarks, but are not the primary public dataset.
 - The public experience should combine a compact Milky Way background with individually selectable named or scientifically important stars.
 - Gaia and the NASA Exoplanet Archive are sufficient for the MVP.
 - Expensive astronomical processing belongs in offline pipelines, not in browser requests.
-- The production server has finite CPU, RAM, and disk capacity, so immutable compact files and on-demand metadata are essential.
+- Target production deployments have finite CPU, RAM, and disk capacity, so immutable compact files and on-demand metadata are essential.
 
 ## Product vision
 
@@ -46,6 +48,18 @@ A deterministic Gaia sample remains available only for:
 - validation of coordinate transforms;
 - density-background prototyping.
 
+## Current prototype status
+
+Implemented today:
+
+- offline identity, exoplanet, Gaia host, density, and visualization pipelines;
+- immutable release publication (`publish-release` → `data/builds/{build_id}/` + `current.json`);
+- FastAPI health, build status, star/alias search, and Arrow data routes;
+- Vue SVG prototype with side-by-side density grid and exoplanet-host scatter plots.
+
+Still planned for the public MVP: deck.gl / WebGL rendering, Motion transitions,
+exoplanet/planet search and detail panels, and production deploy automation.
+
 ## MVP scope
 
 The minimum viable product includes:
@@ -61,7 +75,7 @@ The minimum viable product includes:
 - Parquet for analytical storage;
 - Arrow or compact binary files for frontend rendering;
 - FastAPI for metadata and search;
-- deployment to the existing Hetzner server.
+- deployment to a production VPS.
 
 ## Non-goals for the MVP
 
@@ -103,8 +117,14 @@ Planned for the public MVP:
 - DuckDB
 - Polars
 - PyArrow
+
+### Pipelines
+
+- Python 3.12
+- Polars / PyArrow
 - Astropy
 - Astroquery
+- Prefect-style `@flow` / `@task` decorators (no orchestrator server)
 
 ### Storage
 
@@ -112,41 +132,82 @@ Planned for the public MVP:
 - Processed analytical data: Parquet
 - Frontend datasets: Arrow IPC or compact binary
 - Metadata and manifests: JSON
+- Immutable releases: `data/builds/{build_id}/` selected by `data/builds/current.json`
 
 ### Deployment
 
-- Hetzner virtual server
-- 4 vCPU
-- 8 GB RAM
-- 80 GB local disk
-- 20 TB monthly outbound traffic
-- Caddy or Nginx
+- Production VPS (example capacity: 4 vCPU / 8 GB RAM / 80 GB disk)
+- Caddy or Nginx (planned)
 - Uvicorn/FastAPI
-- Docker Compose or systemd
+- Docker Compose or systemd (planned; not in repo yet)
+
+See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for the release lifecycle and local
+publish workflow.
 
 ## Repository layout
 
 ```text
 milky-way-explorer/
 ├── README.md
+├── PROJECT_SUMMARY.md
 ├── docs/
 │   ├── ARCHITECTURE.md
 │   ├── DATA_FLOW.md
 │   ├── DATASET.md
 │   ├── DEPLOYMENT.md
-│   ├── GAIA_RETRIEVAL.md
-│   └── START_HERE.md
+│   └── GAIA_RETRIEVAL.md
 ├── frontend/
 ├── backend/
 ├── pipelines/
-├── data/
-│   ├── raw/
-│   ├── processed/
-│   ├── frontend/
-│   ├── tiles/
-│   └── metadata/
-└── infrastructure/
+└── data/
+    ├── raw/          # source snapshots (partially vendored)
+    ├── processed/    # mutable Parquet workspace (gitignored)
+    ├── frontend/     # mutable Arrow staging (gitignored)
+    ├── builds/       # immutable releases + current.json (gitignored)
+    └── logs/         # pipeline run logs (gitignored)
 ```
+
+Package setup and commands:
+
+- [pipelines/README.md](pipelines/README.md)
+- [backend/README.md](backend/README.md)
+- [frontend/README.md](frontend/README.md)
+
+## Developer quick start
+
+```bash
+# 1. Canonical offline build (identity, exoplanets, Gaia hosts, host Arrow)
+cd pipelines
+uv sync --all-groups
+uv run python -m app.main
+
+# 2. Density Arrow (needs data/raw/gaia_background/current/)
+uv run python -m app.main build-gaia-density
+
+# 3. Immutable release for the backend
+uv run python -m app.main publish-release --build-id local-001
+
+# 4. API + Arrow serving
+cd ../backend
+uv sync --locked --group dev
+uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+
+# 5. Vue prototype
+cd ../frontend
+npm ci
+cp .env.example .env
+npm run dev
+```
+
+Optional local quality gates (mirrors CI / pre-commit):
+
+```bash
+# from repo root, once
+uv run --project backend pre-commit install
+```
+
+CI already runs package lint, type, test, and frontend build jobs. Production
+SSH deploy is not automated yet.
 
 ## Development phases
 
@@ -154,9 +215,9 @@ milky-way-explorer/
 
 - Create the GitHub repository.
 - Configure Vue, TypeScript, Vite, linting, and tests.
-- Configure FastAPI, Ruff, MyPy, and Pytest.
-- Add Docker Compose for local integration.
+- Configure FastAPI, Ruff, `ty`, and Pytest.
 - Add CI checks without deployment.
+- Docker Compose for local integration remains planned.
 
 ### Phase 2 — Exoplanet-first ingestion
 
@@ -175,27 +236,26 @@ milky-way-explorer/
 
 ### Phase 4 — Milky Way background
 
-- Start with the successfully retrieved 10,000-source Gaia sample.
+- Chunked asynchronous Gaia background retrieval (current sample: 1M
+  `random_index` candidates → accepted sources → density cells).
 - Validate the top-down coordinate pipeline.
-- Build a coarse density grid.
-- Replace single large queries with chunked asynchronous jobs.
+- Build a coarse density grid (`build-gaia-density`).
 - Increase coverage only when pipeline reliability is proven.
 
 ### Phase 5 — Frontend visualization
 
-- Render the density background (planned WebGL / deck.gl path).
-- Render exoplanet hosts as a separate interactive layer.
-- Current prototype: Vue SVG + D3 host scatter plot with heliocentric /
-  Galactocentric frame switching over `exoplanet_hosts.arrow`.
+- Current prototype: Vue SVG + D3 density grid and host scatter with
+  heliocentric / Galactocentric frame switching over published Arrow files.
+- Render density and hosts via WebGL / deck.gl (planned).
 - Add view switching and Motion-powered transitions (planned).
-- Add search and details (planned).
+- Wire search and detail panels to the API (backend search exists; UI pending).
 
 ### Phase 6 — CI/CD and deployment
 
-- Build and test on GitHub Actions.
-- Build production images or artifacts.
-- Deploy through SSH to the Hetzner server.
-- Add health checks, rollback, and backups.
+- Build and test on GitHub Actions (implemented).
+- Build production images or artifacts (planned).
+- Deploy through SSH to a production host (planned).
+- Add health checks, rollback, and backups (planned).
 
 ## Scientific honesty
 
@@ -209,6 +269,19 @@ Every displayed value should be tagged as one of:
 - unknown.
 
 The top-down Milky Way view must be labelled as a **Gaia-observed reconstruction**, not as a complete map of every star in the Galaxy.
+
+## License
+
+Copyright (c) 2026 Oliver Grun.
+
+This project is available under the
+[PolyForm Noncommercial License 1.0.0](LICENSE). Personal, educational,
+research, hobby, and other non-commercial use is permitted. Commercial use,
+including selling the software or using it for an income-generating purpose,
+requires a separate written license from the copyright holder.
+
+Because commercial use is restricted, this project is **source-available**,
+not OSI-approved open-source software.
 
 ## Official data sources
 

@@ -13,18 +13,32 @@ SIMBAD and other naming catalogues may be added later, but the first readable-na
 
 ## 2. Public dataset composition
 
+Analytical workspace (mutable, under `data/processed/` and `data/frontend/`):
+
 ```text
-public_build =
-    gaia_density_cells
-    + exoplanet_hosts
-    + gaia_host_sources
-    + planetary_systems
-    + planets
-    + names
-    + build_manifest
+workspace =
+    stars + alias + exoplanet_host_links
+    + exoplanet_hosts + exoplanet_systems + exoplanets
+    + gaia_host_sources + gaia_density_cells
+    + frontend Arrow staging files
+    + review_* sinks
 ```
 
-A random Gaia sample is not part of the required public dataset.
+Immutable release allowlist copied into `data/builds/{build_id}/`:
+
+```text
+public_build =
+    processed/stars.parquet
+    + processed/alias.parquet
+    + frontend/exoplanet_hosts.arrow
+    + frontend/milky-way-density.arrow
+    + manifest.json   # also written as data/builds/current.json
+```
+
+Other processed tables remain available for analysis but are not served by the
+backend until included in a future allowlist. A random Gaia sample is not part
+of the required public dataset. Snapshot and layout details:
+[DEPLOYMENT.md](DEPLOYMENT.md).
 
 ## 3. Gaia use cases
 
@@ -55,9 +69,11 @@ These rows support:
 
 ### 3.3 Development samples
 
-The existing 10,000-source sample is retained as a development fixture.
+Deterministic Gaia background samples remain available for pipeline and
+renderer experiments. Prefer the committed/maintainer `gaia_background`
+snapshot and `build-gaia-density` over ad-hoc TAP downloads.
 
-It is used to test:
+They are used to test:
 
 - query handling;
 - transformations;
@@ -338,29 +354,46 @@ is_controversial             bool
 source                       string
 ```
 
-### 6.5 Density cell
+### 6.5 Density cell (`gaia_density_cells.parquet`)
 
 ```text
-grid_level               uint8
+grid_level               uint16
 cell_x                   int32
 cell_y                   int32
 source_count             uint32
 weighted_brightness      float32
 mean_bp_rp               float32 nullable
-mean_distance_quality    float32
 ```
 
-### 6.6 Name table
+### 6.6 Name table (planned render-index)
+
+A separate compact name-index table remains planned for denser future render
+files. The current identity catalogue uses `stars.parquet` and `alias.parquet`
+instead (see §6.7).
+
+### 6.7 Identity tables
+
+#### `stars.parquet`
+
+Canonical IAU-named stars (plus enrichment) used by search:
 
 ```text
-name_index               uint32
-entity_type              string
-entity_id                string
-display_name             string
-name_source              string
-aliases                   list<string>
-label_priority           uint16
+star_id
+name_key
+canonical_display_name
+object_type
+designation
+hip
+… enrichment and future Gaia columns …
 ```
+
+#### `alias.parquet`
+
+Alternate designations keyed to `star_id` for prefix/exact search.
+
+#### `exoplanet_host_links.parquet`
+
+Links NASA exoplanet hosts into the identity catalogue.
 
 ## 7. Name policy
 
@@ -446,8 +479,10 @@ unavailable
 - frozen Astropy parameter set `v4.0` (Sun near `(-8.122, 0, 0.0208)` kpc);
 - Sun shown separately.
 
-The build manifest records the Astropy frame configuration
-(`galactocentric_parameter_set = "v4.0"`).
+The implemented v1 manifest records the build identity, source-snapshot
+checksums, and artifact checksums, sizes, and row counts. Query text, Gaia job
+IDs, transformation versions, and the Galactocentric parameter set remain
+planned provenance fields.
 
 ## 10. Quality policy
 
@@ -486,12 +521,19 @@ Quality categories affect spatial inclusion and disclosure, not the existence of
 
 ## 12. Frontend file schemas
 
-### 12.1 Milky Way density Arrow
+### 12.1 Milky Way density Arrow (`milky-way-density.arrow`)
+
+Published by `build-gaia-density` to `data/frontend/milky-way-density.arrow`,
+copied into the immutable release, and served at
+`/data/milky-way-density.arrow` from the active build.
 
 ```text
 grid_level
 cell_x
 cell_y
+cell_center_x_kpc
+cell_center_y_kpc
+cell_size_kpc
 source_count
 weighted_brightness
 mean_bp_rp
@@ -499,8 +541,9 @@ mean_bp_rp
 
 ### 12.2 Exoplanet-host Arrow (`exoplanet_hosts.arrow`)
 
-Published by the pipelines visualization flow to `data/frontend/exoplanet_hosts.arrow`
-and served in local development at `/data/exoplanet_hosts.arrow`. One row per
+Published by the pipelines visualization flow to
+`data/frontend/exoplanet_hosts.arrow`, copied into the immutable release, and
+served at `/data/exoplanet_hosts.arrow` from the active build. One row per
 NASA exoplanet host, joined with system counts and exact Gaia spatial fields
 when available.
 
@@ -568,10 +611,12 @@ These are operational targets, not hard limits.
 
 Keep:
 
-- current public build;
-- previous public build;
+- current public build under `data/builds/{build_id}/`;
+- previous public build for rollback;
 - current raw NASA snapshot;
 - current raw Gaia host snapshot (`data/raw/gaia_hosts/current/`);
+- current raw Gaia background snapshot when retained locally
+  (`data/raw/gaia_background/current/` — not vendored in git);
 - query manifests and checksums.
 
 Delete or archive:
@@ -584,21 +629,50 @@ Delete or archive:
 
 ## 15. Dataset manifest
 
-Example:
+`publish-release` writes `schema_version: 1` manifests. `current.json` is a
+full copy of `builds/{build_id}/manifest.json`. Example (abbreviated):
 
 ```json
 {
-  "build_id": "2026-07-24.1",
-  "gaia_release": "DR3",
-  "exoplanet_snapshot": "2026-07-24",
-  "gaia_background_mode": "chunked_random_sample",
-  "gaia_background_source_count": 1000000,
-  "matched_host_count": 0,
-  "distance_policy_version": "1.0.0",
-  "coordinate_pipeline_version": "1.0.0",
-  "galactocentric_parameter_set": "v4.0",
-  "files": [],
-  "checksums": {}
+  "schema_version": 1,
+  "build_id": "local-001",
+  "created_at": "2026-08-28T19:03:25.492714Z",
+  "source_snapshots": {
+    "exoplanet_names": "65116f8b…",
+    "gaia_background": "2fcfd7e4…",
+    "gaia_hosts": "1e009edb…",
+    "iau_csn": "1479ce77…",
+    "nasa_pscomppars": "1c8ce850…",
+    "wgsn_faints": "54cde8e8…"
+  },
+  "row_counts": {
+    "processed/stars.parquet": 605,
+    "processed/alias.parquet": 2875,
+    "frontend/exoplanet_hosts.arrow": 4749,
+    "frontend/milky-way-density.arrow": 2222
+  },
+  "artifacts": {
+    "processed/stars.parquet": {
+      "sha256": "7a836ae1…",
+      "bytes": 32591,
+      "rows": 605
+    },
+    "processed/alias.parquet": {
+      "sha256": "679510f4…",
+      "bytes": 37789,
+      "rows": 2875
+    },
+    "frontend/exoplanet_hosts.arrow": {
+      "sha256": "a6b1d757…",
+      "bytes": 891106,
+      "rows": 4749
+    },
+    "frontend/milky-way-density.arrow": {
+      "sha256": "9317885c…",
+      "bytes": 77725,
+      "rows": 2222
+    }
+  }
 }
 ```
 
