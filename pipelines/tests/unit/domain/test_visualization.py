@@ -1,7 +1,10 @@
 import polars as pl
 import pytest
 
-from app.domain.visualization import HOST_VISUALIZATION_COLUMNS, build_host_visualization_records
+from app.domain.visualization import (
+    HOST_VISUALIZATION_COLUMNS,
+    build_host_visualization_records,
+)
 
 EXPECTED_COLUMNS = (
     "host_id",

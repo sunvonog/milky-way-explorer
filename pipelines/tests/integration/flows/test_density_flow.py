@@ -3,7 +3,10 @@ from pathlib import Path
 import polars as pl
 import pytest
 
-from app.artifacts import GAIA_DENSITY_CELLS_FILENAME, GAIA_DENSITY_VISUALIZATION_FILENAME
+from app.artifacts import (
+    GAIA_DENSITY_CELLS_FILENAME,
+    GAIA_DENSITY_VISUALIZATION_FILENAME,
+)
 from app.config import override_settings
 from app.domain.density import DENSITY_COLUMNS, DENSITY_VISUALIZATION_COLUMNS
 from app.flows.density import build_gaia_density

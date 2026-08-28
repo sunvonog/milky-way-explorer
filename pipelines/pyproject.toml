@@ -16,6 +16,7 @@ dependencies = [
 dev = [
     "pre-commit==4.6.0",
     "pytest>=9.1.1",
+    "pytest-cov>=7.1.0",
     "ruff>=0.16.0",
     "ty>=0.0.63",
 ]
@@ -33,3 +34,13 @@ select = ["E", "F", "I", "N", "UP", "ANN201", "ANN202", "B", "SIM", "PTH"]
 [tool.ty.rules]
 possibly-unresolved-reference = "error"
 unused-ignore-comment = "warn"
+
+[tool.coverage.run]
+branch = true
+source = ["app"]
+
+[tool.coverage.report]
+fail_under = 85
+precision = 2
+show_missing = true
+skip_covered = true

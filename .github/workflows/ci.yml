@@ -55,7 +55,7 @@ jobs:
       - run: npm run lint
       - run: npm run format:check
       - run: npm run type-check
-      - run: npm run test:unit
+      - run: npm run test:coverage
       - run: npm run build
 
   backend:
@@ -75,7 +75,7 @@ jobs:
       - run: uv run ruff check .
       - run: uv run ruff format --check .
       - run: uv run ty check
-      - run: uv run pytest
+      - run: uv run pytest --cov=app --cov-report=term-missing
 
   pipelines:
     needs: detect-changes
@@ -94,7 +94,7 @@ jobs:
       - run: uv run ruff check .
       - run: uv run ruff format --check .
       - run: uv run ty check
-      - run: uv run pytest
+      - run: uv run pytest --cov=app --cov-report=term-missing
 
   ci-ok:
     needs: [frontend, backend, pipelines]

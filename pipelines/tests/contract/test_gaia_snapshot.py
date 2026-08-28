@@ -1,6 +1,10 @@
 from app.config import REPO_ROOT
 from app.domain.exoplanets import build_hosts
-from app.domain.gaia import build_gaia_host_ids, build_gaia_host_sources, plan_gaia_host_batches
+from app.domain.gaia import (
+    build_gaia_host_ids,
+    build_gaia_host_sources,
+    plan_gaia_host_batches,
+)
 from app.loaders import gaia
 from app.loaders.gaia import load as load_gaia
 from app.loaders.pscomppars import load

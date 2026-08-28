@@ -1,7 +1,12 @@
 import json
 from pathlib import Path
 
-from app.services.builds import BuildInfo, PublishedBuild, read_current_build, resolve_current_build
+from app.services.builds import (
+    BuildInfo,
+    PublishedBuild,
+    read_current_build,
+    resolve_current_build,
+)
 
 
 def _write_manifest(path: Path, build_id: str) -> dict[str, object]:

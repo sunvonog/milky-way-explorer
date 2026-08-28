@@ -17,7 +17,8 @@
     "lint:fix:oxlint": "oxlint . --fix",
     "lint:fix:eslint": "eslint . --fix",
     "format": "oxfmt src/",
-    "format:check": "oxfmt --check src/"
+    "format:check": "oxfmt --check src/",
+    "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
     "apache-arrow": "^21.2.0",
@@ -31,6 +32,7 @@
     "@types/jsdom": "^28.0.3",
     "@types/node": "^24.13.3",
     "@vitejs/plugin-vue": "^6.0.8",
+    "@vitest/coverage-v8": "^4.1.11",
     "@vitest/eslint-plugin": "^1.6.23",
     "@vue/eslint-config-typescript": "^14.9.0",
     "@vue/test-utils": "^2.4.11",
