@@ -24,6 +24,7 @@ uv run python -m app.main --log-json           # JSON on the console (CI)
 uv run python -m app.main refresh-snapshots    # maintainer-only naming snapshot refresh
 uv run python -m app.main refresh-pscomppars   # maintainer-only NASA PSCompPars refresh
 uv run python -m app.main refresh-gaia-hosts   # maintainer-only Gaia retrieval refresh
+uv run python -m app.main publish-release --build-id local-001
 ```
 
 `canonical_build` builds the identity tables, PSCompPars domain tables, the Gaia

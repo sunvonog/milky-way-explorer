@@ -91,3 +91,18 @@ def test_main_runs_gaia_density_build(monkeypatch: pytest.MonkeyPatch) -> None:
 
     assert result == 0
     assert calls == ["gaia-density"]
+
+
+def test_main_runs_release_publication(monkeypatch: pytest.MonkeyPatch) -> None:
+    calls: list[str | None] = []
+
+    def record_release_publication(*, build_id: str | None = None) -> object:
+        calls.append(build_id)
+        return object()
+
+    monkeypatch.setattr(pipeline_main, "publish_current_release", record_release_publication)
+
+    result = pipeline_main.main(["publish-release", "--build-id", "release-123"])
+
+    assert result == 0
+    assert calls == ["release-123"]
