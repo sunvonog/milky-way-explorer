@@ -2,22 +2,13 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterator
-from pathlib import Path
-
 import pytest
 
-from app.config import override_settings, reset_settings
+from app.config import override_settings
 from app.runtime.checks import ExpectationError, expect
 from app.runtime.flow import flow
 
-
-@pytest.fixture(autouse=True)
-def _clean_settings(tmp_path: Path) -> Iterator[None]:
-    reset_settings()
-    override_settings(log_dir=tmp_path / "logs", log_level="WARNING", log_color=False)
-    yield
-    reset_settings()
+pytestmark = pytest.mark.usefixtures("isolated_data_root")
 
 
 def test_expect_passes() -> None:

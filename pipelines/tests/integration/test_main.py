@@ -1,24 +1,10 @@
-from collections.abc import Iterator
 from pathlib import Path
 
 import pytest
 
 import app.main as pipeline_main
-from app.config import override_settings, reset_settings
 
-
-@pytest.fixture(autouse=True)
-def isolated_settings(tmp_path: Path) -> Iterator[None]:
-    reset_settings()
-    override_settings(
-        data_root=tmp_path,
-        log_level="WARNING",
-        log_color=False,
-    )
-
-    yield
-
-    reset_settings()
+pytestmark = pytest.mark.usefixtures("isolated_data_root")
 
 
 def test_canonical_build_runs_publication_flows_in_order(monkeypatch: pytest.MonkeyPatch) -> None:

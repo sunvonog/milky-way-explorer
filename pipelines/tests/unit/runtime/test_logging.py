@@ -3,22 +3,14 @@
 from __future__ import annotations
 
 import json
-from collections.abc import Iterator
 from pathlib import Path
 
 import pytest
 
-from app.config import override_settings, reset_settings
 from app.runtime.flow import flow, task
 from app.runtime.logging import bound_log, setup_logging, teardown_logging
 
-
-@pytest.fixture(autouse=True)
-def _clean_settings(tmp_path: Path) -> Iterator[None]:
-    reset_settings()
-    override_settings(log_dir=tmp_path / "logs", log_level="DEBUG", log_color=False)
-    yield
-    reset_settings()
+pytestmark = pytest.mark.usefixtures("isolated_data_root")
 
 
 def test_setup_logging_writes_jsonl(tmp_path: Path) -> None:

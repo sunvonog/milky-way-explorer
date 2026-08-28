@@ -1,11 +1,10 @@
 import shutil
-from collections.abc import Iterator
 from pathlib import Path
 
 import polars as pl
 import pytest
 
-from app.config import REPO_ROOT, override_settings, reset_settings
+from app.config import REPO_ROOT
 from app.flows.exoplanets import (
     OUTPUT_FILENAMES,
     SNAPSHOT_FILENAME,
@@ -36,19 +35,13 @@ EXPECTED_ROWS = {
 
 
 @pytest.fixture
-def data_root(tmp_path: Path) -> Iterator[Path]:
-    reset_settings()
-    override_settings(
-        data_root=tmp_path, log_dir=tmp_path / "logs", log_level="WARNING", log_color=False
-    )
-
-    destination = snapshot_dir(tmp_path / "raw", SOURCE)
+def data_root(isolated_data_root: Path) -> Path:
+    destination = snapshot_dir(isolated_data_root / "raw", SOURCE)
     destination.mkdir(parents=True)
 
     shutil.copy2(SOURCE_SNAPSHOT, destination / SNAPSHOT_FILENAME)
 
-    yield tmp_path
-    reset_settings()
+    return isolated_data_root
 
 
 def test_output_filenames_are_stable() -> None:

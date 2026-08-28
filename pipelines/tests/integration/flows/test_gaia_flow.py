@@ -1,6 +1,5 @@
 import json
 import shutil
-from collections.abc import Iterator
 from pathlib import Path
 
 import polars as pl
@@ -12,7 +11,7 @@ from app.artifacts import (
     GAIA_HOST_IDS_FILENAME,
     GAIA_HOST_SOURCES_FILENAME,
 )
-from app.config import REPO_ROOT, override_settings, reset_settings
+from app.config import REPO_ROOT, override_settings
 from app.domain.exoplanets import build_hosts
 from app.domain.gaia import GaiaBackgroundBatch, GaiaHostBatch
 from app.flows.gaia import (
@@ -26,22 +25,15 @@ GAIA_HOST_SNAPSHOT = REPO_ROOT / "data" / "raw" / "gaia_hosts" / "current"
 
 
 @pytest.fixture
-def data_root(tmp_path: Path) -> Iterator[Path]:
-    reset_settings()
-    override_settings(
-        data_root=tmp_path, log_dir=tmp_path / "logs", log_level="WARNING", log_color=False
-    )
-
-    processed = tmp_path / "processed"
+def data_root(isolated_data_root: Path) -> Path:
+    processed = isolated_data_root / "processed"
     processed.mkdir(parents=True)
 
     staging = load(PSCOMPPARS_SNAPSHOT)
     hosts = build_hosts(staging)
     hosts.write_parquet(processed / EXOPLANET_HOSTS_FILENAME)
 
-    yield tmp_path
-
-    reset_settings()
+    return isolated_data_root
 
 
 def _write_gaia_manifest(data_root: Path, source_ids: list[int]) -> Path:

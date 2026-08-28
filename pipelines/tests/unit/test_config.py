@@ -2,20 +2,12 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterator
 from pathlib import Path
 
 import pytest
 from pydantic import ValidationError
 
 from app.config import REPO_ROOT, get_settings, override_settings, reset_settings
-
-
-@pytest.fixture(autouse=True)
-def _clean_settings() -> Iterator[None]:
-    reset_settings()
-    yield
-    reset_settings()
 
 
 def test_defaults_resolve_under_repo_root() -> None:
