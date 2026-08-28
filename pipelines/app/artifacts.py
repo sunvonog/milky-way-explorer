@@ -10,3 +10,6 @@ GAIA_DENSITY_CELLS_FILENAME = "gaia_density_cells.parquet"
 
 HOST_VISUALIZATION_FILENAME = "exoplanet_hosts.arrow"
 GAIA_DENSITY_VISUALIZATION_FILENAME = "milky-way-density.arrow"
+
+STARS_FILENAME = "stars.parquet"
+ALIASES_FILENAME = "alias.parquet"

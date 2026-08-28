@@ -8,6 +8,7 @@ from pathlib import Path
 import polars as pl
 from logly import Logger
 
+from app.artifacts import ALIASES_FILENAME, STARS_FILENAME
 from app.config import get_settings
 from app.domain.identity import (
     build_aliases,
@@ -154,8 +155,8 @@ def write_outputs(
     out = get_settings().processed_root
     out.mkdir(parents=True, exist_ok=True)
     paths = {
-        "stars": out / "stars.parquet",
-        "aliases": out / "alias.parquet",
+        "stars": out / STARS_FILENAME,
+        "aliases": out / ALIASES_FILENAME,
         "linked": out / "exoplanet_host_links.parquet",
         "unmatched": out / "review_unmatched_hosts.parquet",
         "dropped": out / "review_dropped_stars.parquet",
