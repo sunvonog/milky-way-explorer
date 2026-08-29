@@ -240,7 +240,7 @@ def add_gaia_background_distance(frame: pl.DataFrame) -> pl.DataFrame:
 
     Gaia ``parallax_over_error`` is parallax divided by its standard
     uncertainty, so its reciprocal approximates fractional parallax
-    uncertainty. S/N 5 correspons to about 20%, beyond which direct parallax
+    uncertainty. S/N 5 corresponds to about 20%, beyond which direct parallax
     inversion becomes increasingly unstable
     (Coryn A. L. Bailer-Jones 2015 PASP 127 994
     https://iopscience.iop.org/article/10.1086/683116).

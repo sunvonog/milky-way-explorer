@@ -8,6 +8,7 @@ DENSITY_COLUMNS = (
     "grid_level",
     "cell_x",
     "cell_y",
+    "distance_tier",
     "source_count",
     "weighted_brightness",
     "mean_bp_rp",
@@ -17,6 +18,7 @@ DENSITY_VISUALIZATION_COLUMNS = (
     "grid_level",
     "cell_x",
     "cell_y",
+    "distance_tier",
     "cell_center_x_kpc",
     "cell_center_y_kpc",
     "cell_size_kpc",
@@ -34,6 +36,10 @@ def build_gaia_density_grid(
     The grid covers ``[-extent_kpc, +extent_kpc)`` on both axes.
     ``weighted_brightness`` is a relative G-band flux proxy,
     ``10 ** (-0.4 * G)``, intended for rendering rather than photometry.
+
+    Distance tier is part of the cell identity. Baseline and exploratory
+    sources must remain separate because their source counts, brightness sums,
+    and mean colours cannot be recovered independently after aggregation.
     """
     if grid_size <= 0:
         raise ValueError("grid_size must be positive")
@@ -81,7 +87,7 @@ def build_gaia_density_grid(
             _relative_brightness=relative_brightness,
             _bp_rp=valid_colour,
         )
-        .group_by("cell_x", "cell_y")
+        .group_by("cell_x", "cell_y", "distance_tier")
         .agg(
             source_count=pl.len().cast(pl.UInt32),
             weighted_brightness=(pl.col("_relative_brightness").sum().cast(pl.Float32)),
@@ -89,7 +95,7 @@ def build_gaia_density_grid(
         )
         .with_columns(pl.lit(grid_size, dtype=pl.UInt16).alias("grid_level"))
         .select(*DENSITY_COLUMNS)
-        .sort("cell_x", "cell_y")
+        .sort("cell_x", "cell_y", "distance_tier")
     )
 
 
@@ -137,5 +143,5 @@ def build_gaia_density_visualization_records(
             pl.col("_cell_size_kpc").alias("cell_size_kpc"),
         )
         .select(*DENSITY_VISUALIZATION_COLUMNS)
-        .sort("grid_level", "cell_x", "cell_y")
+        .sort("grid_level", "cell_x", "cell_y", "distance_tier")
     )

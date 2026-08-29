@@ -26,6 +26,8 @@ def _background_row(
     *,
     longitude_deg: float,
     ra_deg: float = 10.0,
+    distance_gspphot: float | None = 200.0,
+    parallax_over_error: float = 50.0,
 ) -> dict[str, object]:
     return {
         "source_id": source_id,
@@ -34,11 +36,11 @@ def _background_row(
         "l": longitude_deg,
         "b": 0.0,
         "parallax": 5.0,
-        "parallax_over_error": 50.0,
+        "parallax_over_error": parallax_over_error,
         "phot_g_mean_mag": 12.0,
         "bp_rp": 0.8,
         "ruwe": 1.0,
-        "distance_gspphot": 200.0,
+        "distance_gspphot": distance_gspphot,
     }
 
 
@@ -49,7 +51,7 @@ def _write_background_snapshot(data_root: Path) -> Path:
 
     rows = [
         _background_row(1, longitude_deg=0.0),
-        _background_row(2, longitude_deg=90.0),
+        _background_row(2, longitude_deg=90.0, distance_gspphot=None, parallax_over_error=3.0),
         # Invalid right ascension: retained by the loader but excluded
         # before coordinate transformation and density aggregation
         _background_row(3, longitude_deg=180.0, ra_deg=400.0),
@@ -90,6 +92,23 @@ def test_build_gaia_density_publishes_all_configured_grid(data_root: Path) -> No
     assert visualization.columns == list(DENSITY_VISUALIZATION_COLUMNS)
     assert visualization["grid_level"].unique().sort().to_list() == [2, 4]
     assert visualization["cell_size_kpc"].unique().sort().to_list() == [10.0, 20.0]
+    assert visualization["distance_tier"].unique().sort().to_list() == ["baseline", "exploratory"]
+
+    tier_totals = {
+        (grid_level, distance_tier): source_count
+        for grid_level, distance_tier, source_count in (
+            cells.group_by("grid_level", "distance_tier")
+            .agg(pl.col("source_count").sum())
+            .iter_rows()
+        )
+    }
+
+    assert tier_totals == {
+        (2, "baseline"): 1,
+        (2, "exploratory"): 1,
+        (4, "baseline"): 1,
+        (4, "exploratory"): 1,
+    }
 
 
 def test_build_gaia_density_requires_committed_snapshot(data_root: Path) -> None:
