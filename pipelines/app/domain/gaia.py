@@ -11,6 +11,10 @@ from astropy.coordinates import Galactocentric, SkyCoord, galactocentric_frame_d
 
 _DEGREES_TO_RADIANS = pi / 180.0
 
+BASELINE_PARALLAX_SNR = 5.0
+EXPLORATORY_PARALLAX_SNR = 2.0
+MAX_ACCEPTED_RUWE = 1.4
+
 GALACTOCENTRIC_PARAMETER_SET = "v4.0"
 
 GAIA_HOST_SOURCE_COLUMNS = (
@@ -64,6 +68,7 @@ GAIA_BACKGROUND_SOURCE_COLUMNS = (
     "distance_pc",
     "distance_method",
     "distance_quality",
+    "distance_tier",
     "galactocentric_x_kpc",
     "galactocentric_y_kpc",
     "galactocentric_z_kpc",
@@ -150,11 +155,24 @@ def _has_positive_gspphot_distance() -> pl.Expr:
     ).fill_null(False)
 
 
+def _has_acceptable_ruwe() -> pl.Expr:
+    return (pl.col("ruwe").is_null() | (pl.col("ruwe") < MAX_ACCEPTED_RUWE)).fill_null(False)
+
+
 def _has_qualified_parallax() -> pl.Expr:
     return (
         (pl.col("parallax_mas") > 0)
-        & (pl.col("parallax_over_error") >= 5)
-        & (pl.col("ruwe").is_null() | (pl.col("ruwe") < 1.4))
+        & (pl.col("parallax_over_error") >= BASELINE_PARALLAX_SNR)
+        & _has_acceptable_ruwe()
+    ).fill_null(False)
+
+
+def _has_exploratory_parallax() -> pl.Expr:
+    return (
+        (pl.col("parallax_mas") > 0)
+        & (pl.col("parallax_over_error") >= EXPLORATORY_PARALLAX_SNR)
+        & (pl.col("parallax_over_error") < BASELINE_PARALLAX_SNR)
+        & _has_acceptable_ruwe()
     ).fill_null(False)
 
 
@@ -217,6 +235,58 @@ def add_gaia_distance(frame: pl.DataFrame) -> pl.DataFrame:
     )
 
 
+def add_gaia_background_distance(frame: pl.DataFrame) -> pl.DataFrame:
+    """Select baseline and exploratory Gaia background distances.
+
+    Gaia ``parallax_over_error`` is parallax divided by its standard
+    uncertainty, so its reciprocal approximates fractional parallax
+    uncertainty. S/N 5 correspons to about 20%, beyond which direct parallax
+    inversion becomes increasingly unstable
+    (Coryn A. L. Bailer-Jones 2015 PASP 127 994
+    https://iopscience.iop.org/article/10.1086/683116).
+
+    The 2 <= S/N < 5 range is therefore retained only as an exploratory
+    visualization tier. It must remain distinguishable from the baseline
+    density and must not be presented as an equally reliable distance sample.
+    """
+    has_gspphot = _has_positive_gspphot_distance()
+    has_baseline_parallax = _has_qualified_parallax()
+    has_exploratory_parallax = _has_exploratory_parallax()
+
+    return frame.with_columns(
+        distance_pc=(
+            pl.when(has_gspphot)
+            .then(pl.col("distance_gspphot_pc"))
+            .when(has_baseline_parallax | has_exploratory_parallax)
+            .then(1000.0 / pl.col("parallax_mas"))
+            .otherwise(None)
+        ),
+        distance_method=(
+            pl.when(has_gspphot)
+            .then(pl.lit("gaia_gspphot"))
+            .when(has_baseline_parallax | has_exploratory_parallax)
+            .then(pl.lit("inverse_parallax"))
+            .otherwise(pl.lit("unavailable"))
+        ),
+        distance_quality=(
+            pl.when(has_gspphot)
+            .then(pl.lit("positive_gspphot_estimate"))
+            .when(has_baseline_parallax)
+            .then(pl.lit("snr_ge_5_ruwe_acceptable"))
+            .when(has_exploratory_parallax)
+            .then(pl.lit("snr_2_to_5_ruwe_acceptable"))
+            .otherwise(pl.lit("unavailable"))
+        ),
+        distance_tier=(
+            pl.when(has_gspphot | has_baseline_parallax)
+            .then(pl.lit("baseline"))
+            .when(has_exploratory_parallax)
+            .then(pl.lit("exploratory"))
+            .otherwise(pl.lit("unavailable"))
+        ),
+    )
+
+
 def build_gaia_host_sources(staging: pl.DataFrame) -> pl.DataFrame:
     """Build one published Gaia source record per valid host source ID."""
     return (
@@ -233,7 +303,7 @@ def build_gaia_background_sources(staging: pl.DataFrame) -> pl.DataFrame:
     """Build density-ready Gaia sources from valid background rows."""
     return (
         staging.filter(pl.col("is_valid"))
-        .pipe(_add_gaia_selected_distance)
+        .pipe(add_gaia_background_distance)
         .pipe(add_galactocentric_coordinates)
         .select(*GAIA_BACKGROUND_SOURCE_COLUMNS)
         .sort("gaia_source_id")
