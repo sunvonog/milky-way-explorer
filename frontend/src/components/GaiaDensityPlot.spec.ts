@@ -108,4 +108,61 @@ describe('GaiaDensityPlot', () => {
     expect(wrapper.get('[data-axis-title="x"]').text()).toBe('Galactocentric x (kpc)')
     expect(wrapper.get('[data-axis-title="y"]').text()).toBe('Galactocentric y (kpc)')
   })
+
+  it('requires explicit opt-in before rendering exploratory density', async () => {
+    const wrapper = mount(GaiaDensityPlot, {
+      props: {
+        records: [
+          densityCell({
+            distanceTier: 'baseline',
+            sourceCount: 10,
+          }),
+          densityCell({
+            distanceTier: 'exploratory',
+            sourceCount: 4,
+          }),
+        ],
+      },
+    })
+
+    const initialCells = wrapper.findAll('[data-density-cell]')
+
+    expect(initialCells).toHaveLength(1)
+    expect(initialCells[0]!.attributes('data-distance-tier')).toBe('baseline')
+    expect(wrapper.text()).toContain('10 Gaia sources in 1 occupied cell')
+
+    const toggle = wrapper.get<HTMLInputElement>('[data-density-quality-toggle]')
+
+    expect(toggle.element.checked).toBe(false)
+    expect(toggle.attributes('aria-describedby')).toBe('gaia-density-quality-description')
+
+    await toggle.setValue(true)
+
+    const expandedCells = wrapper.findAll('[data-density-cell]')
+
+    expect(expandedCells).toHaveLength(2)
+    expect(expandedCells.map((cell) => cell.attributes('data-distance-tier'))).toEqual([
+      'baseline',
+      'exploratory',
+    ])
+
+    expect(expandedCells[0]!.classes()).toContain('fill-cyan-400')
+    expect(expandedCells[1]!.classes()).toContain('fill-amber-400')
+    expect(wrapper.text()).toContain('14 Gaia sources in 1 occupied cell')
+  })
+
+  it('explains what exoplatory density means', () => {
+    const wrapper = mount(GaiaDensityPlot, {
+      props: {
+        records: [densityCell()],
+      },
+    })
+
+    const label = wrapper.get('label[for="include-exploratory-density"]')
+    const description = wrapper.get('#gaia-density-quality-description')
+
+    expect(label.text()).toContain('exploratory')
+    expect(description.text()).toContain('S/N')
+    expect(description.text()).toContain('less stable')
+  })
 })

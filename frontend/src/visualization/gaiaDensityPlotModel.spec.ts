@@ -154,4 +154,24 @@ describe('buildGaiaDensityPlotModel', () => {
     ])
     expect(model.sourceCount).toBe(14)
   })
+
+  it('counts overlapping quality tiers as one occupied cell', () => {
+    const model = buildGaiaDensityPlotModel(
+      [
+        densityCell({
+          distanceTier: 'baseline',
+          sourceCount: 10,
+        }),
+        densityCell({
+          distanceTier: 'exploratory',
+          sourceCount: 4,
+        }),
+      ],
+      4,
+      { includeExploratory: true },
+    )
+
+    expect(model.cells).toHaveLength(2)
+    expect(model.occupiedCellCount).toBe(1)
+  })
 })

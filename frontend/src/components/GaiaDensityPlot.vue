@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 
 import type { DensityVisualizationRecord } from '@/domain/density'
 import {
@@ -14,6 +14,8 @@ interface Props {
 
 const props = defineProps<Props>()
 
+const includeExploratory = ref(false)
+
 const selectedGridLevel = computed(() => selectHighestGaiaDensityGridLevel(props.records))
 
 const plot = computed(() => {
@@ -21,7 +23,18 @@ const plot = computed(() => {
     return null
   }
 
-  return buildGaiaDensityPlotModel(props.records, selectedGridLevel.value)
+  return buildGaiaDensityPlotModel(props.records, selectedGridLevel.value, {
+    includeExploratory: includeExploratory.value,
+  })
+})
+
+const occupiedCellLabel = computed(() => {
+  if (!plot.value) {
+    return ''
+  }
+
+  const count = plot.value.occupiedCellCount
+  return `${count} occupied ${count === 1 ? 'cell' : 'cells'}`
 })
 
 const { width, height, margin, plotWidth, plotHeight } = gaiaDensityPlotLayout
@@ -40,10 +53,33 @@ const { width, height, margin, plotWidth, plotHeight } = gaiaDensityPlotLayout
       <strong class="text-lg font-semibold">Gaia source density</strong>
 
       <span class="text-sm text-slate-400">
-        {{ plot.sourceCount }} Gaia sources in {{ plot.cells.length }} occupied cells -
-        {{ plot.gridLevel }} x {{ plot.gridLevel }} grid
+        {{ plot.sourceCount }} Gaia sources in {{ occupiedCellLabel }} - {{ plot.gridLevel }} x
+        {{ plot.gridLevel }} grid
       </span>
     </figcaption>
+
+    <div class="space-y-1">
+      <label
+        for="include-exploratory-density"
+        class="flex items-center gap-2 text-sm text-slate-200"
+      >
+        <input
+          id="include-exploratory-density"
+          v-model="includeExploratory"
+          data-density-quality-toggle
+          type="checkbox"
+          aria-describedby="gaia-density-quality-description"
+          class="size-4 accent-amber-400"
+        />
+
+        Include exploratory distances
+      </label>
+
+      <p id="gaia-density-quality-description" class="max-w-xl text-xs text-slate-400">
+        Baseline uses GSP-Phot estimates or inverse-parallax S/N >= 5. Exploratory adds
+        inverse-parallax S/N from 2 to below 5; these positions are less stable.
+      </p>
+    </div>
 
     <svg
       class="block h-auto w-full rounded-xl bg-slate-950"
@@ -68,18 +104,21 @@ const { width, height, margin, plotWidth, plotHeight } = gaiaDensityPlotLayout
 
       <rect
         v-for="cell in plot.cells"
-        :key="`${cell.record.gridLevel}-${cell.record.cellX}-${cell.record.cellY}`"
+        :key="`${plot.gridLevel}-${cell.record.cellX}-${cell.record.cellY}-${cell.record.distanceTier}`"
         data-density-cell
         :data-cell-x="cell.record.cellX"
         :data-cell-y="cell.record.cellY"
-        class="fill-cyan-400"
+        :class="cell.record.distanceTier === 'baseline' ? 'fill-cyan-400' : 'fill-amber-400'"
         :x="cell.x"
         :y="cell.y"
         :width="cell.width"
         :height="cell.height"
         :fill-opacity="cell.opacity"
+        :data-distance-tier="cell.record.distanceTier"
       >
-        <title>{{ cell.record.sourceCount }} Gaia sources</title>
+        <title>
+          {{ cell.record.sourceCount }} Gaia sources - {{ cell.record.distanceTier }} distance tier
+        </title>
       </rect>
 
       <g v-for="tick in plot.xTicks" :key="`x-${tick.value}`">

@@ -50,6 +50,7 @@ export interface GaiaDensityPlotModel {
   galacticCentre: ScreenPosition
   xTicks: AxisTick[]
   yTicks: AxisTick[]
+  occupiedCellCount: number
 }
 
 export interface GaiaDensityPlotOptions {
@@ -117,6 +118,10 @@ export function buildGaiaDensityPlotModel(
 
   const galactocentricFrame = coordinateFrames.galactocentric
 
+  const occupiedCellCount = new Set(
+    selectedRecords.map((record) => `${record.cellX}:${record.cellY}`),
+  ).size
+
   return {
     cells: selectedRecords.map((record) => {
       const halfCellSize = record.cellSizeKpc / 2
@@ -152,5 +157,6 @@ export function buildGaiaDensityPlotModel(
       label: formatTick(value),
       pixel: yScale(value),
     })),
+    occupiedCellCount,
   }
 }
