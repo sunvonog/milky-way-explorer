@@ -1,6 +1,6 @@
 import { tableFromIPC } from 'apache-arrow'
-import type { DensityVisualizationRecord } from '@/domain/density'
-import { nullableNumber, requiredNumber, type ArrowRow } from './arrowRow'
+import type { DensityVisualizationRecord, DensityDistanceTier } from '@/domain/density'
+import { nullableNumber, requiredNumber, requiredString, type ArrowRow } from './arrowRow'
 
 const DENSITY_VISUALIZATION_FILENAME = 'milky-way-density.arrow'
 
@@ -20,6 +20,7 @@ export function decodeDensityVisualization(data: Uint8Array): DensityVisualizati
       gridLevel: requiredNumber(row, 'grid_level'),
       cellX: requiredNumber(row, 'cell_x'),
       cellY: requiredNumber(row, 'cell_y'),
+      distanceTier: distanceTier(row),
       cellCenterXKpc: requiredNumber(row, 'cell_center_x_kpc'),
       cellCenterYKpc: requiredNumber(row, 'cell_center_y_kpc'),
       cellSizeKpc: requiredNumber(row, 'cell_size_kpc'),
@@ -48,4 +49,16 @@ export async function loadDensityVisualization(
   const data = new Uint8Array(await response.arrayBuffer())
 
   return decodeDensityVisualization(data)
+}
+
+function distanceTier(row: ArrowRow): DensityDistanceTier {
+  const value = requiredString(row, 'distance_tier')
+
+  switch (value) {
+    case 'baseline':
+    case 'exploratory':
+      return value
+    default:
+      throw new TypeError(`unknown distance_tier: ${value}`)
+  }
 }

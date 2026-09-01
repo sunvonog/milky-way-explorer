@@ -52,6 +52,10 @@ export interface GaiaDensityPlotModel {
   yTicks: AxisTick[]
 }
 
+export interface GaiaDensityPlotOptions {
+  includeExploratory?: boolean
+}
+
 const formatTick = format('~s')
 
 export function selectHighestGaiaDensityGridLevel(
@@ -67,8 +71,13 @@ export function selectHighestGaiaDensityGridLevel(
 export function buildGaiaDensityPlotModel(
   records: readonly DensityVisualizationRecord[],
   gridLevel: number,
+  options: GaiaDensityPlotOptions = {},
 ): GaiaDensityPlotModel {
-  const selectedRecords = records.filter((record) => record.gridLevel === gridLevel)
+  const selectedRecords = records.filter(
+    (record) =>
+      record.gridLevel === gridLevel &&
+      (record.distanceTier === 'baseline' || options.includeExploratory === true),
+  )
 
   if (selectedRecords.length === 0) {
     throw new RangeError(`no density cells available for grid level ${gridLevel}`)

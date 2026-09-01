@@ -11,6 +11,7 @@ function densityCell(
     gridLevel: 4,
     cellX: 0,
     cellY: 0,
+    distanceTier: 'baseline',
     cellCenterXKpc: -15,
     cellCenterYKpc: -15,
     cellSizeKpc: 10,

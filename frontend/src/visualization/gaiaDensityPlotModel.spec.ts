@@ -14,6 +14,7 @@ function densityCell(
     gridLevel: 4,
     cellX: 0,
     cellY: 0,
+    distanceTier: 'baseline',
     cellCenterXKpc: -1.5,
     cellCenterYKpc: -1.5,
     cellSizeKpc: 1,
@@ -110,5 +111,47 @@ describe('buildGaiaDensityPlotModel', () => {
     )
 
     expect(model.sourceCount).toBe(17)
+  })
+
+  it('renders only baseline density by default', () => {
+    const model = buildGaiaDensityPlotModel(
+      [
+        densityCell({
+          distanceTier: 'baseline',
+          sourceCount: 10,
+        }),
+        densityCell({
+          distanceTier: 'exploratory',
+          sourceCount: 4,
+        }),
+      ],
+      4,
+    )
+
+    expect(model.cells.map(({ record }) => record.distanceTier)).toEqual(['baseline'])
+    expect(model.sourceCount).toBe(10)
+  })
+
+  it('includes exploratory density only when requested', () => {
+    const model = buildGaiaDensityPlotModel(
+      [
+        densityCell({
+          distanceTier: 'baseline',
+          sourceCount: 10,
+        }),
+        densityCell({
+          distanceTier: 'exploratory',
+          sourceCount: 4,
+        }),
+      ],
+      4,
+      { includeExploratory: true },
+    )
+
+    expect(model.cells.map(({ record }) => record.distanceTier)).toEqual([
+      'baseline',
+      'exploratory',
+    ])
+    expect(model.sourceCount).toBe(14)
   })
 })
