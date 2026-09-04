@@ -466,7 +466,7 @@ This tiering applies only to the statistical Gaia background. Exact
 exoplanet-host positions continue to use the stricter baseline policy.
 
 The inverse-parallax limitation follows the discussion in
-[Coryn A. L. Bailer-Jones 2015 PASP 127 994]('https://iopscience.iop.org/article/10.1086/683116')
+[Coryn A. L. Bailer-Jones 2015 PASP 127 994](https://iopscience.iop.org/article/10.1086/683116)
 
 ### 8.4 Required provenance
 
