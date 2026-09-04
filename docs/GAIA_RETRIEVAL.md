@@ -22,7 +22,7 @@ uv run python -m app.main refresh-gaia-background
 uv run python -m app.main build-gaia-density
 ```
 
-`refresh-gaia-background` scans 5,000,000 `random_index` candidates in ten
+`refresh-gaia-background` scans 5,000,000 `random_index` candidates in fifty
 asynchronous CSV batches of 100,000 (configurable via
 `MWE_GAIA_BACKGROUND_SOURCE_COUNT` / `MWE_GAIA_BACKGROUND_BATCH_SIZE`). The
 snapshot under `data/raw/gaia_background/current/` is **not** vendored in git.
@@ -220,7 +220,18 @@ SELECT
 FROM gaiadr3.gaia_source
 WHERE random_index >= 0
   AND random_index < 100000
+  AND (
+    distance_gspphot > 0
+    OR parallax > 0
+  )
+ORDER BY source_id
 ```
+
+This query intentionally retrieves candidates rather than enforcing the final
+distance-quality policy in ADQL. The domain layer classifies candidates as
+baseline, exploratory, or unavailable. Keeping classification offline makes
+the scientific policy testable and allows it to evolve without changing the
+raw retrieval boundary.
 
 Next chunk:
 

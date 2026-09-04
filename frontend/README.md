@@ -169,6 +169,7 @@ The decoder in `src/data/densityVisualization.ts` expects:
 grid_level
 cell_x
 cell_y
+distance_tier
 cell_center_x_kpc
 cell_center_y_kpc
 cell_size_kpc
@@ -188,6 +189,9 @@ Invariants contributors must preserve:
   spatial relationships are not distorted.
 - **Both artifacts required** — missing density or host data fails the whole
   load.
+- **Explicit uncertainty opt-in** — baseline density is displayed by default.
+  Exploratory inverse-parallax density is visually distinguished and rendered
+  only after the user enables it.
 
 See [../docs/DATASET.md](../docs/DATASET.md) for the published schema and
 [../docs/DATA_FLOW.md](../docs/DATA_FLOW.md) for pipeline → publish → backend →

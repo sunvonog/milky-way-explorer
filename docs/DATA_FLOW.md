@@ -261,7 +261,7 @@ sources across 334 occupied density cells and validated the density path.
 
 The implemented maintainer path is `refresh-gaia-background` followed by
 `build-gaia-density`. The current repeatable sample scans 5,000,000 Gaia
-`random_index` candidates in ten batches of 100,000 (async CSV downloads).
+`random_index` candidates in fifty batches of 100,000 (async CSV downloads).
 A representative local run produced:
 
 - 3,164,915 retrieved and valid candidate rows;

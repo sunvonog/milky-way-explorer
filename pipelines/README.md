@@ -189,8 +189,8 @@ Current expectations: 4,396 sources; 109 without an accepted distance (null spat
 
 | File | Contents |
 |---|---|
-| `gaia_density_cells.parquet` | Occupied Galactocentric density cells |
-| `frontend/milky-way-density.arrow` | Visualization Arrow with cell geometry |
+| `gaia_density_cells.parquet` | Occupied Galactocentric density cells, aggregated separately by distance-quality tier |
+| `frontend/milky-way-density.arrow` | Visualization Arrow with cell geometry and distance-quality tier |
 
 Host visualization (`build_host_visualization`, part of the canonical build)
 additionally writes `frontend/exoplanet_hosts.arrow` with position-status

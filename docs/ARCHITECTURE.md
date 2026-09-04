@@ -220,6 +220,9 @@ Implemented responsibilities:
 - aggregate sources into density cells (`build-gaia-density`);
 - write `gaia_density_cells.parquet` and `frontend/milky-way-density.arrow`;
 - discard unnecessary source-level temporary data after a successful build.
+- classify candidate distances into baseline, exploratory, and unavailable tiers;
+- aggregate baseline and exploratory sources separately so their statistics remain 
+ independently renderable;
 
 The pipeline may produce several grid resolutions later; the current default is
 a single 128 × 128 grid over a ±20 kpc Galactocentric extent. Commands and
@@ -444,7 +447,7 @@ flowchart TB
 
 ### Prototype (current)
 
-- chunked Gaia background sample (1M `random_index` candidates);
+- chunked Gaia background sample (5M `random_index` candidates);
 - complete exoplanet catalogue;
 - exact Gaia records for matched hosts;
 - one coarse density grid + dual SVG visualization;
