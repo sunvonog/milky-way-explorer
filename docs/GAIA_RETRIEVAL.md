@@ -216,7 +216,8 @@ SELECT
     parallax_over_error,
     phot_g_mean_mag,
     bp_rp,
-    ruwe
+    ruwe,
+    distance_gspphot
 FROM gaiadr3.gaia_source
 WHERE random_index >= 0
   AND random_index < 100000
@@ -241,7 +242,7 @@ WHERE random_index >= 100000
 ```
 
 Continue until the configured source-count threshold is reached (default
-1,000,000).
+5,000,000).
 
 ### Benefits
 

@@ -110,12 +110,13 @@ flowchart LR
 
 Responsibilities:
 
-- load `milky-way-density.arrow` and `exoplanet_hosts.arrow` from the
-  configured data base URL (both required);
-- validate Arrow rows into typed density and host visualization records;
-- project heliocentric and Galactocentric host positions with an equal
-  physical scale;
-- render side-by-side SVG plots: Gaia density grid and exoplanet-host scatter.
+- retrieve manageable Gaia chunks via `refresh-gaia-background`
+  (default: 5,000,000 `random_index` candidates in 100,000-row CSV batches);
+- classify candidate distances as baseline, exploratory, or unavailable;
+- transform renderable sources into Galactocentric coordinates;
+- aggregate sources into density cells while preserving their distance tier;
+- write `gaia_density_cells.parquet` and `frontend/milky-way-density.arrow`;
+- discard unnecessary source-level temporary data after a successful build.
 
 Module boundaries:
 
