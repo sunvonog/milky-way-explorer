@@ -121,14 +121,7 @@ WHERE random_index >= {batch.random_index_start}
 AND random_index < {batch.random_index_stop}
 AND (
     distance_gspphot > 0
-    OR (
-        parallax > 0
-        AND parallax_over_error >= 5
-        AND (
-            ruwe IS NULL
-            OR ruwe < 1.4
-        )
-    )
+    OR parallax > 0
 )
 ORDER BY source_id"""
 

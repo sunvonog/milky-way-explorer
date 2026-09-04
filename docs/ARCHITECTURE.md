@@ -215,9 +215,10 @@ Future responsibilities:
 Implemented responsibilities:
 
 - retrieve manageable Gaia chunks via `refresh-gaia-background`
-  (default: 1,000,000 `random_index` candidates in 100,000-row CSV batches);
-- transform accepted sources into Galactocentric coordinates;
-- aggregate sources into density cells (`build-gaia-density`);
+  (default: 5,000,000 `random_index` candidates in 100,000-row CSV batches);
+- classify candidate distances as baseline, exploratory, or unavailable;
+- transform renderable sources into Galactocentric coordinates;
+- aggregate sources into density cells while preserving their distance tier;
 - write `gaia_density_cells.parquet` and `frontend/milky-way-density.arrow`;
 - discard unnecessary source-level temporary data after a successful build.
 
@@ -444,7 +445,7 @@ flowchart TB
 
 ### Prototype (current)
 
-- chunked Gaia background sample (1M `random_index` candidates);
+- chunked Gaia background sample (5M `random_index` candidates);
 - complete exoplanet catalogue;
 - exact Gaia records for matched hosts;
 - one coarse density grid + dual SVG visualization;

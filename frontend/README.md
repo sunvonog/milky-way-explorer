@@ -30,10 +30,10 @@ npm ci
 cp .env.example .env
 ```
 
-| Variable | Purpose |
-| --- | --- |
-| `VITE_DATA_BASE_URL` | Base URL for static/frontend data files (required; no fallback) |
-| `VITE_API_BASE_URL` | Reserved for metadata/search APIs (backend search exists; UI unused) |
+| Variable             | Purpose                                                              |
+| -------------------- | -------------------------------------------------------------------- |
+| `VITE_DATA_BASE_URL` | Base URL for static/frontend data files (required; no fallback)      |
+| `VITE_API_BASE_URL`  | Reserved for metadata/search APIs (backend search exists; UI unused) |
 
 Local defaults point at the backend:
 
@@ -78,19 +78,19 @@ started from `backend/` (or `MWE_DATA_ROOT` points at the shared `data/` tree).
 
 ## Scripts
 
-| Command | Purpose |
-| --- | --- |
-| `npm run dev` | Vite dev server with hot reload |
-| `npm run build` | Type-check, then production build → `dist/` |
-| `npm run preview` | Preview the production build |
-| `npm run type-check` | `vue-tsc --build` |
-| `npm run lint` | Oxlint and ESLint |
-| `npm run lint:fix` | Auto-fix lint issues |
-| `npm run format` | Format `src/` with Oxfmt |
-| `npm run format:check` | Check formatting (CI / pre-commit) |
-| `npm run test:unit` | Vitest (watch by default) |
-| `npm run test:unit -- --run` | One-shot unit tests (pre-commit) |
-| `npm run test:coverage` | Coverage run with 85% statement/function/line and 80% branch thresholds (CI) |
+| Command                      | Purpose                                                                      |
+| ---------------------------- | ---------------------------------------------------------------------------- |
+| `npm run dev`                | Vite dev server with hot reload                                              |
+| `npm run build`              | Type-check, then production build → `dist/`                                  |
+| `npm run preview`            | Preview the production build                                                 |
+| `npm run type-check`         | `vue-tsc --build`                                                            |
+| `npm run lint`               | Oxlint and ESLint                                                            |
+| `npm run lint:fix`           | Auto-fix lint issues                                                         |
+| `npm run format`             | Format `src/` with Oxfmt                                                     |
+| `npm run format:check`       | Check formatting (CI / pre-commit)                                           |
+| `npm run test:unit`          | Vitest (watch by default)                                                    |
+| `npm run test:unit -- --run` | One-shot unit tests (pre-commit)                                             |
+| `npm run test:coverage`      | Coverage run with 85% statement/function/line and 80% branch thresholds (CI) |
 
 CI runs lint, format check, type-check, `test:coverage`, and `build` for
 `frontend/` changes. Pre-commit uses one-shot unit tests.
@@ -126,12 +126,12 @@ data loader → domain
 domain → (no UI or transport dependencies)
 ```
 
-| Layer | Responsibility |
-| --- | --- |
-| `domain/` | Host and density record types, Cartesian positions, Astropy v4.0 Sun constants, frame presentation |
-| `data/` | Fetch Arrow IPC, validate fields / enums / nullability, map snake_case columns to frontend records |
+| Layer            | Responsibility                                                                                             |
+| ---------------- | ---------------------------------------------------------------------------------------------------------- |
+| `domain/`        | Host and density record types, Cartesian positions, Astropy v4.0 Sun constants, frame presentation         |
+| `data/`          | Fetch Arrow IPC, validate fields / enums / nullability, map snake_case columns to frontend records         |
 | `visualization/` | Pure projection: equal physical scale, ticks, reference points, density cell geometry, planet-count radius |
-| `components/` | SVG rendering, frame toggle, and interaction state |
+| `components/`    | SVG rendering, frame toggle, and interaction state                                                         |
 
 D3 is limited to scales, ticks, formatting, and projection inside
 `visualization/`. Vue components own the SVG DOM. There is no router or global
@@ -169,6 +169,7 @@ The decoder in `src/data/densityVisualization.ts` expects:
 grid_level
 cell_x
 cell_y
+distance_tier
 cell_center_x_kpc
 cell_center_y_kpc
 cell_size_kpc
@@ -188,6 +189,9 @@ Invariants contributors must preserve:
   spatial relationships are not distorted.
 - **Both artifacts required** — missing density or host data fails the whole
   load.
+- **Explicit uncertainty opt-in** — baseline density is displayed by default.
+  Exploratory inverse-parallax density is visually distinguished and rendered
+  only after the user enables it.
 
 See [../docs/DATASET.md](../docs/DATASET.md) for the published schema and
 [../docs/DATA_FLOW.md](../docs/DATA_FLOW.md) for pipeline → publish → backend →

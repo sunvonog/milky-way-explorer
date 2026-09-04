@@ -360,6 +360,7 @@ source                       string
 grid_level               uint16
 cell_x                   int32
 cell_y                   int32
+distance_tier            string
 source_count             uint32
 weighted_brightness      float32
 mean_bp_rp               float32 nullable
@@ -421,7 +422,7 @@ unavailable
     → source omitted from top-down spatial views
 ```
 
-### 8.2 Prototype inverse-parallax criteria
+### 8.2 Exact-host inverse-parallax criteria
 
 Suggested defaults:
 
@@ -433,7 +434,41 @@ ruwe is null or ruwe < 1.4
 
 These values are configurable project criteria, not universal scientific truth.
 
-### 8.3 Required provenance
+### 8.3 Background density distance tiers
+
+The statistical Gaia background uses two renderable distance tiers.
+
+```text
+baseline
+    → positive GSP-Phot distance; or
+    → positive inverse parallax with parallax_over_error >= 5
+      and RUWE null or below 1.4
+
+exploratory
+    → no positive GSP-Phot distance
+    → positive inverse parallax
+    → 2 <= parallax_over_error < 5
+    → RUWE null or below 1.4
+
+unavailable
+    → no distance accepted by either policy
+```
+
+GSP-Phot takes precedence when both distance methods are available.
+Gaia `parallax_over_error` is the parallax signal-to-noise ratio. Its
+reciprocal approximates fractional parallax uncertainty: S/N 5 corresponds
+to approximately 20%, while S/N 2 corresponds to approximately 50%.
+Direct inversion becomes increasingly unstable at lower signal-to-noise,
+so exploratory density is visually distinguished and requires explicit
+user opt-in.
+
+This tiering applies only to the statistical Gaia background. Exact
+exoplanet-host positions continue to use the stricter baseline policy.
+
+The inverse-parallax limitation follows the discussion in
+[Coryn A. L. Bailer-Jones 2015 PASP 127 994](https://iopscience.iop.org/article/10.1086/683116)
+
+### 8.4 Required provenance
 
 Every spatial record stores:
 
@@ -531,6 +566,7 @@ copied into the immutable release, and served at
 grid_level
 cell_x
 cell_y
+distance_tier
 cell_center_x_kpc
 cell_center_y_kpc
 cell_size_kpc

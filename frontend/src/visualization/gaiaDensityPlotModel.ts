@@ -50,6 +50,11 @@ export interface GaiaDensityPlotModel {
   galacticCentre: ScreenPosition
   xTicks: AxisTick[]
   yTicks: AxisTick[]
+  occupiedCellCount: number
+}
+
+export interface GaiaDensityPlotOptions {
+  includeExploratory?: boolean
 }
 
 const formatTick = format('~s')
@@ -67,8 +72,13 @@ export function selectHighestGaiaDensityGridLevel(
 export function buildGaiaDensityPlotModel(
   records: readonly DensityVisualizationRecord[],
   gridLevel: number,
+  options: GaiaDensityPlotOptions = {},
 ): GaiaDensityPlotModel {
-  const selectedRecords = records.filter((record) => record.gridLevel === gridLevel)
+  const selectedRecords = records.filter(
+    (record) =>
+      record.gridLevel === gridLevel &&
+      (record.distanceTier === 'baseline' || options.includeExploratory === true),
+  )
 
   if (selectedRecords.length === 0) {
     throw new RangeError(`no density cells available for grid level ${gridLevel}`)
@@ -108,6 +118,10 @@ export function buildGaiaDensityPlotModel(
 
   const galactocentricFrame = coordinateFrames.galactocentric
 
+  const occupiedCellCount = new Set(
+    selectedRecords.map((record) => `${record.cellX}:${record.cellY}`),
+  ).size
+
   return {
     cells: selectedRecords.map((record) => {
       const halfCellSize = record.cellSizeKpc / 2
@@ -143,5 +157,6 @@ export function buildGaiaDensityPlotModel(
       label: formatTick(value),
       pixel: yScale(value),
     })),
+    occupiedCellCount,
   }
 }

@@ -90,7 +90,7 @@ Settings live in [`app/config.py`](app/config.py) (`pydantic-settings`,
 | `MWE_LOG_DIR` | `<data_root>/logs` | Override log directory |
 | `MWE_LOG_RETENTION` | `20` | Run log files kept per flow |
 | `MWE_STRICT_CHECKS` | `false` | Raise when expectations miss |
-| `MWE_GAIA_BACKGROUND_SOURCE_COUNT` | `1000000` | `random_index` candidates for background refresh |
+| `MWE_GAIA_BACKGROUND_SOURCE_COUNT` | `5000000` | `random_index` candidates for background refresh |
 | `MWE_GAIA_BACKGROUND_BATCH_SIZE` | `100000` | Async batch size for background refresh |
 | `MWE_GAIA_DENSITY_EXTENT_KPC` | `20.0` | Half-extent of the Galactocentric density grid |
 
@@ -189,8 +189,8 @@ Current expectations: 4,396 sources; 109 without an accepted distance (null spat
 
 | File | Contents |
 |---|---|
-| `gaia_density_cells.parquet` | Occupied Galactocentric density cells |
-| `frontend/milky-way-density.arrow` | Visualization Arrow with cell geometry |
+| `gaia_density_cells.parquet` | Occupied Galactocentric density cells, aggregated separately by distance-quality tier |
+| `frontend/milky-way-density.arrow` | Visualization Arrow with cell geometry and distance-quality tier |
 
 Host visualization (`build_host_visualization`, part of the canonical build)
 additionally writes `frontend/exoplanet_hosts.arrow` with position-status
