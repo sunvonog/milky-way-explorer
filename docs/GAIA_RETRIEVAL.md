@@ -22,7 +22,7 @@ uv run python -m app.main refresh-gaia-background
 uv run python -m app.main build-gaia-density
 ```
 
-`refresh-gaia-background` scans 1,000,000 `random_index` candidates in ten
+`refresh-gaia-background` scans 5,000,000 `random_index` candidates in ten
 asynchronous CSV batches of 100,000 (configurable via
 `MWE_GAIA_BACKGROUND_SOURCE_COUNT` / `MWE_GAIA_BACKGROUND_BATCH_SIZE`). The
 snapshot under `data/raw/gaia_background/current/` is **not** vendored in git.

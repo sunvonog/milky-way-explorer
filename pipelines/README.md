@@ -90,7 +90,7 @@ Settings live in [`app/config.py`](app/config.py) (`pydantic-settings`,
 | `MWE_LOG_DIR` | `<data_root>/logs` | Override log directory |
 | `MWE_LOG_RETENTION` | `20` | Run log files kept per flow |
 | `MWE_STRICT_CHECKS` | `false` | Raise when expectations miss |
-| `MWE_GAIA_BACKGROUND_SOURCE_COUNT` | `1000000` | `random_index` candidates for background refresh |
+| `MWE_GAIA_BACKGROUND_SOURCE_COUNT` | `5000000` | `random_index` candidates for background refresh |
 | `MWE_GAIA_BACKGROUND_BATCH_SIZE` | `100000` | Async batch size for background refresh |
 | `MWE_GAIA_DENSITY_EXTENT_KPC` | `20.0` | Half-extent of the Galactocentric density grid |
 

@@ -215,7 +215,7 @@ Future responsibilities:
 Implemented responsibilities:
 
 - retrieve manageable Gaia chunks via `refresh-gaia-background`
-  (default: 1,000,000 `random_index` candidates in 100,000-row CSV batches);
+  (default: 5,000,000 `random_index` candidates in 100,000-row CSV batches);
 - transform accepted sources into Galactocentric coordinates;
 - aggregate sources into density cells (`build-gaia-density`);
 - write `gaia_density_cells.parquet` and `frontend/milky-way-density.arrow`;

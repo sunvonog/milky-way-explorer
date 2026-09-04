@@ -260,15 +260,23 @@ Historical note: an early 10,000-candidate retrieval produced 2,740 accepted
 sources across 334 occupied density cells and validated the density path.
 
 The implemented maintainer path is `refresh-gaia-background` followed by
-`build-gaia-density`. The current repeatable sample scans 1,000,000 Gaia
+`build-gaia-density`. The current repeatable sample scans 5,000,000 Gaia
 `random_index` candidates in ten batches of 100,000 (async CSV downloads).
-After applying the distance policy, a representative local run produced:
+A representative local run produced:
 
-- 274,685 accepted sources;
-- 260,481 GSP-Phot distances;
-- 14,204 qualified inverse-parallax distances;
-- 274,681 sources inside the fixed density-grid extent;
-- 2,222 occupied cells in the 128 × 128 grid.
+- 3,164,915 retrieved and valid candidate rows;
+- 1,299,696 baseline GSP-Phot distances;
+- 71,200 baseline inverse-parallax distances;
+- 366,111 exploratory inverse-parallax distances;
+- 1,427,908 rows without an accepted visualization distance;
+- 1,370,886 baseline and 366,059 exploratory sources inside the
+  fixed ±20 kpc density-grid extent;
+- 3,655 baseline and 3,731 exploratory density rows;
+- 4,728 unique occupied cells in the 128 × 128 grid.
+
+The configured source count defines the scanned `random_index` range. It does
+not guarantee the same number of returned rows because the ADQL query returns
+only candidates with a positive GSP-Phot distance or positive parallax.
 
 Those counts are run-specific observations for the current snapshot, not hard
 code expectations. The `gaia_background` snapshot is **not** vendored in git;
