@@ -12,3 +12,19 @@ export interface DensityVisualizationRecord {
   weightedBrightness: number
   meanBpRp: number | null
 }
+
+export interface DensitySelectionOptions {
+  includeExploratory?: boolean
+}
+
+export function selectDensityRecords(
+  records: readonly DensityVisualizationRecord[],
+  gridLevel: number,
+  options: DensitySelectionOptions = {},
+): DensityVisualizationRecord[] {
+  return records.filter(
+    (record) =>
+      record.gridLevel === gridLevel &&
+      (record.distanceTier === 'baseline' || options.includeExploratory === true),
+  )
+}
