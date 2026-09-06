@@ -113,17 +113,20 @@ Responsibilities:
 - load `milky-way-density.arrow` and `exoplanet_hosts.arrow` from the
   configured data base URL (both required);
 - validate Arrow rows into typed density and host visualization records;
+- select baseline vs exploratory density tiers;
+- build deck.gl layers for the Galactocentric density map (cells + references);
 - project heliocentric and Galactocentric host positions with an equal
   physical scale;
-- render side-by-side SVG plots: Gaia density grid and exoplanet-host scatter.
+- render a WebGL density panel beside an SVG exoplanet-host scatter plot;
+- keep an SVG density diagnostic as a collapsed comparison.
 
 Module boundaries:
 
 ```text
-domain/          scientific types, coordinates, frame definitions
+domain/          scientific types, coordinates, frame definitions, density selection
 data/            Arrow transport and validation (host + density)
-visualization/   pure D3 plot-model construction
-components/      Vue SVG presentation and interaction state
+visualization/   pure D3 plot models + deck.gl layer / camera builders
+components/      Vue canvas lifecycle, SVG presentation, and interaction state
 ```
 
 Dependency direction: components and App depend on data + visualization +
@@ -136,29 +139,29 @@ Current stack:
 - TypeScript;
 - Vite;
 - Tailwind CSS;
-- D3 (scales, ticks, projection only);
+- D3 (scales, ticks, projection, density opacity);
 - Apache Arrow JavaScript;
-- Vue-managed SVG rendering.
+- deck.gl OrthographicView + Polygon / Scatterplot / Text layers;
+- Vue-managed SVG for hosts and the density diagnostic.
 
-There is no router, global store, API client, or WebGL renderer in the current
+There is no router, global store, or search/detail API client in the current
 package. See [../frontend/README.md](../frontend/README.md).
 
 #### Target MVP (planned)
 
 Responsibilities:
 
-- render Galactic density layers with WebGL / deck.gl;
-- render named and exoplanet-host markers;
-- maintain camera and projection state;
+- unify density and host markers in one interactive WebGL explorer;
+- maintain shared camera and projection state across layers;
 - animate transitions;
-- perform GPU picking;
+- perform GPU picking for host selection;
 - load metadata after selection;
 - search hosts and planets from the UI;
 - expose quality and provenance labels.
 
 Planned stack additions:
 
-- deck.gl / WebGL rendering;
+- host / selection / label layers on the existing deck.gl foundation;
 - Motion for Vue (or equivalent transition layer);
 - metadata and search API client.
 
@@ -306,22 +309,40 @@ GET /api/v1/planets/{planet_id}
 
 ### Current prototype
 
-The implemented views are Vue-managed SVG plots: a Gaia density-grid panel and
-an exoplanet-host scatter panel. D3 builds pure plot models (equal physical
-scale, ticks, reference points, cell geometry, planet-count radii); components
-render shapes and frame controls. Hosts without positions for the selected
-frame are retained in the dataset but omitted from the host plot.
+The Milky Way background is an aggregated density map, not a cloud of individual
+Gaia stars. The density panel uses deck.gl on a Vue-owned canvas; hosts remain
+on a separate SVG scatter panel.
+
+Implemented layers on the density map:
+
+```text
+DensityLayer (PolygonLayer)
+    Quality-aware Gaia density cells in Galactocentric kpc
+    Baseline by default; exploratory inverse-parallax opt-in
+
+ReferenceLayer (ScatterplotLayer + TextLayer)
+    Sun and Galactic centre annotations (screen-pixel sizes)
+```
+
+Camera: `OrthographicView` with `flipY: false` (positive x right, positive y
+up). `fitGalacticMapView` sets a single zoom from pixels-per-kpc so both axes
+share an equal physical scale. Pan, zoom, and reset-view are live.
+
+The SVG density plot remains as a diagnostic comparison under the WebGL map.
+Host scatter stays Vue-managed SVG with heliocentric / Galactocentric frame
+switching. Hosts without positions for the selected frame stay in the dataset
+but are omitted from the host plot.
 
 ### Target MVP layers
 
-The public renderer is planned to use separate WebGL / deck.gl layers:
+Extend the existing deck.gl foundation into one explorer:
 
 ```text
 DensityLayer
-    Gaia-derived Galactic context
+    Gaia-derived Galactic context (implemented)
 
 HostStarLayer
-    Individually selectable exoplanet hosts
+    Individually selectable exoplanet hosts (planned on WebGL)
 
 NamedStarLabelLayer
     Labels visible according to zoom and priority
@@ -330,10 +351,10 @@ SelectionLayer
     Selected-source highlight
 
 ReferenceLayer
-    Galactic centre, Sun, scale rings, axes
+    Galactic centre, Sun, scale rings, axes (Sun / centre implemented)
 ```
 
-The background and host layers can be updated independently.
+Density and host layers should remain independently updatable.
 
 ## 7. Coordinate systems
 
@@ -448,14 +469,14 @@ flowchart TB
 - chunked Gaia background sample (5M `random_index` candidates);
 - complete exoplanet catalogue;
 - exact Gaia records for matched hosts;
-- one coarse density grid + dual SVG visualization;
+- one coarse density grid rendered with deck.gl + SVG host scatter;
 - immutable `publish-release` builds;
 - GitHub Actions CI (lint / type / test / frontend build).
 
 ### Public MVP
 
 - multiple density resolutions;
-- WebGL / deck.gl rendering;
+- unified WebGL explorer (hosts on the density map);
 - UI search and detail panels;
 - compact Arrow delivery behind a reverse proxy;
 - GitHub Actions SSH deployment.

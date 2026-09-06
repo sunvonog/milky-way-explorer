@@ -43,8 +43,10 @@ flowchart TD
     API --> Web
 ```
 
-The current browser prototype is a Vue SVG + D3 dual panel (density grid +
-host scatter). WebGL / deck.gl rendering remains the planned public MVP path.
+The current browser prototype loads both Arrow artifacts, then builds deck.gl
+layers for the Galactocentric density map and D3 plot models for the SVG host
+scatter (plus a collapsed SVG density diagnostic). A unified WebGL explorer
+that overlays hosts on the density map remains the planned public MVP path.
 
 ## 2.0 Identity ingestion
 
@@ -481,28 +483,31 @@ remains active if a new publish fails before the pointer switch.
 Pipelines stage Arrow files under `data/frontend/`. After `publish-release`,
 FastAPI resolves `data/builds/current.json` and serves both artifacts from the
 immutable build. The Vue app fetches them via `VITE_DATA_BASE_URL`, validates
-each row, builds pure D3 plot models, and renders SVG panels.
+each row, builds deck.gl density / reference layers and D3 plot models, then
+renders the WebGL density map beside the SVG host scatter.
 
 ```mermaid
 sequenceDiagram
     participant B as Browser
     participant A as FastAPI
     participant F as Frontend data layer
-    participant V as Visualization models
+    participant V as Visualization builders
 
     B->>A: GET /data/exoplanet_hosts.arrow
     B->>A: GET /data/milky-way-density.arrow
     A-->>B: Arrow IPC bytes from published build
     B->>F: decodeHostVisualization + decodeDensityVisualization
     F-->>B: Host and density record lists
-    B->>V: buildHostScatterPlotModel + density plot model
-    V-->>B: Screen positions, ticks, cell geometry
-    B->>B: Render Vue-managed SVG panels
+    B->>V: buildGaiaDensityLayer + reference layers
+    B->>V: buildHostScatterPlotModel + density SVG model
+    V-->>B: deck.gl LayersList + SVG plot models
+    B->>B: Mount Deck on canvas; render SVG host panel
 ```
 
 Hosts without an accepted distance or exact Gaia source remain in the payload
 but are omitted from the selected spatial view. Missing either Arrow file fails
-the page load.
+the page load. WebGL init failures surface an error on the map; the SVG density
+diagnostic remains available.
 
 ### Target MVP load (planned)
 
@@ -520,7 +525,7 @@ sequenceDiagram
     S-->>B: Density cells
     B->>S: GET exoplanet_hosts.arrow
     S-->>B: Named host render records
-    B->>B: Upload numeric attributes to GPU
+    B->>B: Upload density + host attributes to GPU layers
 ```
 
 ### Source selection (planned)
@@ -549,7 +554,8 @@ sequenceDiagram
 - prototype fetches both development artifacts through FastAPI `/data/*`;
 - selected details cached in memory;
 - stale requests aborted;
-- old GPU buffers released after view changes (planned WebGL path).
+- Deck finalized on unmount; release old GPU buffers when swapping large layer
+  datasets during view changes (unified explorer path).
 
 ### Reverse proxy
 

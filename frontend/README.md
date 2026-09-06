@@ -2,12 +2,14 @@
 
 Vue 3 application for the Milky Way & Exoplanet Explorer. The current prototype
 loads two published Arrow IPC files — a Gaia density grid and exoplanet hosts —
-and renders side-by-side interactive SVG plots (D3 scales, Vue-owned DOM) with
-heliocentric / Galactocentric frame switching on the host panel.
+and renders side-by-side panels: an interactive WebGL Galactocentric density map
+(deck.gl) and an SVG exoplanet-host scatter plot (D3 scales, Vue-owned DOM) with
+heliocentric / Galactocentric frame switching.
 
-WebGL / deck.gl rendering, Motion transitions, search UI, and detail panels
-remain planned MVP work. The backend already exposes star/alias search; this
-package does not call it yet.
+A collapsed SVG density plot remains available as a diagnostic comparison under
+the WebGL map. Motion transitions, search UI, host markers on the GPU map, and
+detail panels remain planned MVP work. The backend already exposes star/alias
+search; this package does not call it yet.
 
 ## Requirements
 
@@ -103,25 +105,31 @@ src/
 ├── App.vue                 # Load both Arrow files and loading / error UI
 ├── assets/                 # Global styles (Tailwind)
 ├── components/             # Vue presentation and interaction state
-│   ├── HostScatterPlot.vue
-│   └── GaiaDensityPlot.vue
+│   ├── GalacticMapCanvas.vue   # deck.gl OrthographicView lifecycle
+│   ├── GaiaDensityPlot.vue     # density controls + WebGL map + SVG diagnostic
+│   └── HostScatterPlot.vue     # host SVG scatter + frame toggle
 ├── data/                   # Arrow fetch + validation boundary
 │   ├── hostVisualization.ts
 │   └── densityVisualization.ts
 ├── domain/                 # Scientific types, coordinates, frame definitions
 │   ├── host.ts
-│   └── density.ts
-└── visualization/          # Pure D3 plot-model construction
-    ├── hostScatterPlotModel.ts
-    └── gaiaDensityPlotModel.ts
+│   ├── density.ts          # record types + baseline / exploratory selection
+│   └── coordinates / frames
+└── visualization/          # Pure projection + deck.gl layer builders
+    ├── gaiaDensityLayer.ts
+    ├── gaiaDensityStyle.ts
+    ├── galacticMapView.ts
+    ├── galacticReferenceLayers.ts
+    ├── gaiaDensityPlotModel.ts   # SVG diagnostic model
+    └── hostScatterPlotModel.ts
 ```
 
 Dependency direction:
 
 ```text
 App → data loaders + components
-component → visualization model + domain
-visualization model → domain
+component → visualization model / layers + domain
+visualization → domain (+ deck.gl layer constructors where applicable)
 data loader → domain
 domain → (no UI or transport dependencies)
 ```
@@ -130,12 +138,44 @@ domain → (no UI or transport dependencies)
 | ---------------- | ---------------------------------------------------------------------------------------------------------- |
 | `domain/`        | Host and density record types, Cartesian positions, Astropy v4.0 Sun constants, frame presentation         |
 | `data/`          | Fetch Arrow IPC, validate fields / enums / nullability, map snake_case columns to frontend records         |
-| `visualization/` | Pure projection: equal physical scale, ticks, reference points, density cell geometry, planet-count radius |
-| `components/`    | SVG rendering, frame toggle, and interaction state                                                         |
+| `visualization/` | Pure projection, deck.gl layer construction, camera fit, density styling, SVG diagnostic models            |
+| `components/`    | Canvas / SVG rendering, quality toggle, frame toggle, and interaction state                                |
 
 D3 is limited to scales, ticks, formatting, and projection inside
-`visualization/`. Vue components own the SVG DOM. There is no router or global
-store in this prototype.
+`visualization/`. Vue components own the SVG DOM and the deck.gl canvas
+lifecycle. There is no router or global store in this prototype.
+
+## Density map controls and canvas lifecycle
+
+`GaiaDensityPlot` owns density selection state and composes layers for the
+WebGL map:
+
+| Control | Behaviour |
+| --- | --- |
+| Include exploratory distances | Off by default. Baseline cells use GSP-Phot or inverse-parallax S/N ≥ 5; enabling the toggle adds exploratory inverse-parallax S/N 2–5 (amber). |
+| Reset view | Refits the orthographic camera to the full ±`extentKpc` grid with padding. |
+| Pan / zoom | Drag to pan; scroll or pinch to zoom (`OrthographicView` controller). |
+| SVG diagnostic | Collapsed `<details>` comparison using the same selection and styling. |
+
+`GalacticMapCanvas` mounts a deck.gl `Deck` on a Vue-owned `<canvas>`:
+
+1. **Mount** — create `Deck` with `createGalacticMapView()`, initial layers, and a zeroed view state.
+2. **Resize** — store canvas size and call `fitGalacticMapView` so both axes share one zoom (equal physical scale).
+3. **Layer updates** — watch `layers` and `extentKpc`; push new props / refit the camera.
+4. **View changes** — sync controller `viewState` back into the Deck.
+5. **Errors** — surface a WebGL failure message; the SVG diagnostic remains usable.
+6. **Unmount** — `deck.finalize()` and drop the instance.
+
+Layer composition for the density panel:
+
+```text
+PolygonLayer          Gaia density cells (cartesian kpc, quality-aware colours)
+ScatterplotLayer      Sun + Galactic centre markers (screen-pixel radii)
+TextLayer             Reference labels (drawn above density; depth write off)
+```
+
+Hosts remain on the SVG scatter panel. A unified WebGL explorer that overlays
+hosts on the density map is still planned.
 
 ## Data contracts
 
@@ -186,7 +226,7 @@ Invariants contributors must preserve:
   Gaia match remain in the dataset but are omitted from the selected spatial
   view.
 - **Equal physical scale** — both plot axes share one units-per-pixel value so
-  spatial relationships are not distorted.
+  spatial relationships are not distorted (SVG models and `fitGalacticMapView`).
 - **Both artifacts required** — missing density or host data fails the whole
   load.
 - **Explicit uncertainty opt-in** — baseline density is displayed by default.

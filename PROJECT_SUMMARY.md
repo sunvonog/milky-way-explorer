@@ -13,7 +13,7 @@ Build an interactive 2D Milky Way and exoplanet explorer with:
 - readable host names from the NASA Exoplanet Archive;
 - an Earth-centred exoplanet atlas;
 - detailed planetary-system views;
-- smooth WebGL and Motion transitions (planned for the public MVP).
+- smooth WebGL and Motion transitions for the public MVP.
 
 ## Dataset decision
 
@@ -24,16 +24,17 @@ Use only:
 
 Do not use DESI in the MVP.
 
-Do not use a large random Gaia sample as the primary public star layer.
+Do not use a large random Gaia sample as the primary public star layer. The
+Galactic context is an aggregated density map, not individual background stars.
 
 ## Data composition
 
 ```text
 Global Milky Way context
-    aggregated Gaia density cells
+    aggregated Gaia density cells (WebGL PolygonLayer)
 
 Interactive objects
-    all confirmed exoplanet hosts
+    all confirmed exoplanet hosts (SVG scatter today; WebGL planned)
     exact Gaia enrichment when an ID is available
     readable NASA/HD/HIP/Gaia names
 
@@ -52,6 +53,8 @@ Details
 - Gaia should not be called directly by the browser.
 - Mutable pipeline outputs must be published into immutable builds before the
   backend serves them.
+- Density belongs on the GPU early; host overlay and picking can follow on the
+  same OrthographicView foundation.
 
 ## Current status
 
@@ -60,12 +63,14 @@ Completed for the current snapshots and prototype:
 - identity naming catalogues → `stars.parquet` / `alias.parquet`;
 - PSCompPars ingestion and review sinks;
 - exact Gaia host retrieval (`refresh-gaia-hosts` + committed `gaia_hosts` snapshot);
-- chunked Gaia background retrieval (1M `random_index` candidates in 100k
+- chunked Gaia background retrieval (5M `random_index` candidates in 100k
   batches) and `build-gaia-density`;
 - host and density Arrow visualization files;
 - `publish-release` → `data/builds/{build_id}/` + atomic `current.json`;
 - FastAPI health, build, star/alias search, and Arrow data routes;
-- Vue SVG dual-panel density + host prototype.
+- WebGL / deck.gl density foundation: quality-aware `PolygonLayer`, fitted
+  camera, pan/zoom/reset, Sun / Galactic-centre references, SVG diagnostic;
+- SVG exoplanet-host scatter with heliocentric / Galactocentric frames.
 
 Historical note: early single-query attempts around ~181k random sources failed;
 the implemented path uses chunked async CSV downloads. See
@@ -102,16 +107,18 @@ naming snapshots + PSCompPars
     → compact host + density Arrow files
     → publish-release
     → FastAPI serves published build
-    → Vue density + host visualization
+    → Vue WebGL density map + SVG host scatter
 ```
 
-Still planned: planetary-system detail panel, WebGL rendering, UI search wiring,
-and production deploy automation.
+Still planned: unified WebGL explorer (hosts on the density map), planetary-system
+detail panel, UI search wiring, and production deploy automation.
 
 ## Next actions
 
-1. Wire the frontend to `GET /api/v1/search` and add object-detail panels.
-2. Move rendering toward deck.gl / WebGL for the public MVP.
+1. Build a performance-aware unified explorer: host markers on the existing
+   deck.gl map, shared camera, and GPU picking without regressing density
+   interaction.
+2. Wire the frontend to `GET /api/v1/search` and add object-detail panels.
 3. Add production reverse-proxy + deploy automation (see
    [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)).
 4. Decide whether to vendor or document a fetch path for
