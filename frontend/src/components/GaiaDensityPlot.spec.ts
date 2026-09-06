@@ -198,6 +198,12 @@ describe('GaiaDensityPlot', () => {
           data: [baseline],
         }),
       }),
+      expect.objectContaining({
+        id: 'galactic-reference-points',
+      }),
+      expect.objectContaining({
+        id: 'galactic-reference-labels',
+      }),
     ])
 
     await wrapper.get('[data-density-quality-toggle]').setValue(true)
@@ -207,6 +213,12 @@ describe('GaiaDensityPlot', () => {
         props: expect.objectContaining({
           data: [baseline, exploratory],
         }),
+      }),
+      expect.objectContaining({
+        id: 'galactic-reference-points',
+      }),
+      expect.objectContaining({
+        id: 'galactic-reference-labels',
       }),
     ])
 

@@ -9,6 +9,7 @@ import {
   gaiaDensityPlotLayout,
   selectHighestGaiaDensityGridLevel,
 } from '@/visualization/gaiaDensityPlotModel'
+import { buildGalacticReferenceLayers } from '@/visualization/galacticReferenceLayers'
 
 interface Props {
   records: DensityVisualizationRecord[]
@@ -31,6 +32,7 @@ const mapLayers = computed(() => {
     buildGaiaDensityLayer(props.records, gridLevel, {
       includeExploratory: includeExploratory.value,
     }),
+    ...buildGalacticReferenceLayers(),
   ]
 })
 
