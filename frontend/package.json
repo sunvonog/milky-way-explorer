@@ -10,7 +10,7 @@
     "test:unit": "vitest",
     "build-only": "vite build",
     "type-check": "vue-tsc --build",
-    "lint": "run-s \"lint:*\"",
+    "lint": "run-s lint:oxlint lint:eslint",
     "lint:oxlint": "oxlint .",
     "lint:eslint": "eslint .",
     "lint:fix": "run-s \"lint:fix:*\"",
@@ -21,6 +21,8 @@
     "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
+    "@deck.gl/core": "^9.3.11",
+    "@deck.gl/layers": "^9.3.11",
     "apache-arrow": "^21.2.0",
     "d3": "^7.9.0",
     "vue": "^3.5.40"

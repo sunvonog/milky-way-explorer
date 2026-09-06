@@ -55,10 +55,13 @@ Implemented today:
 - offline identity, exoplanet, Gaia host, density, and visualization pipelines;
 - immutable release publication (`publish-release` → `data/builds/{build_id}/` + `current.json`);
 - FastAPI health, build status, star/alias search, and Arrow data routes;
-- Vue SVG prototype with side-by-side density grid and exoplanet-host scatter plots.
+- Vue prototype with a WebGL / deck.gl Galactocentric density map (pan, zoom,
+  quality toggle, Sun / Galactic-centre references) beside an SVG exoplanet-host
+  scatter plot; SVG density retained as a diagnostic comparison.
 
-Still planned for the public MVP: deck.gl / WebGL rendering, Motion transitions,
-exoplanet/planet search and detail panels, and production deploy automation.
+Still planned for the public MVP: a unified WebGL explorer (hosts on the density
+map), Motion transitions, exoplanet/planet search and detail panels, and
+production deploy automation.
 
 ## MVP scope
 
@@ -101,11 +104,12 @@ Current prototype:
 - Tailwind CSS
 - D3
 - Apache Arrow JavaScript
-- Vue-managed SVG rendering
+- deck.gl (`@deck.gl/core`, `@deck.gl/layers`) for the density map
+- Vue-managed SVG for the host scatter and density diagnostic
 
 Planned for the public MVP:
 
-- deck.gl / WebGL rendering
+- unified WebGL explorer (host markers on the density map)
 - Motion for Vue (or equivalent transitions)
 - search and object-detail API client
 
@@ -244,9 +248,10 @@ SSH deploy is not automated yet.
 
 ### Phase 5 — Frontend visualization
 
-- Current prototype: Vue SVG + D3 density grid and host scatter with
+- Current prototype: WebGL / deck.gl density map (quality-aware cells, fitted
+  orthographic camera, reference markers) beside SVG host scatter with
   heliocentric / Galactocentric frame switching over published Arrow files.
-- Render density and hosts via WebGL / deck.gl (planned).
+- Unify density and hosts in one interactive WebGL explorer (planned).
 - Add view switching and Motion-powered transitions (planned).
 - Wire search and detail panels to the API (backend search exists; UI pending).
 

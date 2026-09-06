@@ -1,7 +1,13 @@
-import { format, scaleLinear, scaleSqrt } from 'd3'
+import { format, scaleLinear } from 'd3'
+
+import { createGaiaDensityOpacityScale } from './gaiaDensityStyle'
 
 import { coordinateFrames } from '@/domain/coordinateFrames'
-import type { DensityVisualizationRecord } from '@/domain/density'
+import {
+  selectDensityRecords,
+  type DensityVisualizationRecord,
+  type DensitySelectionOptions,
+} from '@/domain/density'
 
 const width = 800
 const height = 800
@@ -53,9 +59,7 @@ export interface GaiaDensityPlotModel {
   occupiedCellCount: number
 }
 
-export interface GaiaDensityPlotOptions {
-  includeExploratory?: boolean
-}
+export type GaiaDensityPlotOptions = DensitySelectionOptions
 
 const formatTick = format('~s')
 
@@ -74,11 +78,7 @@ export function buildGaiaDensityPlotModel(
   gridLevel: number,
   options: GaiaDensityPlotOptions = {},
 ): GaiaDensityPlotModel {
-  const selectedRecords = records.filter(
-    (record) =>
-      record.gridLevel === gridLevel &&
-      (record.distanceTier === 'baseline' || options.includeExploratory === true),
-  )
+  const selectedRecords = selectDensityRecords(records, gridLevel, options)
 
   if (selectedRecords.length === 0) {
     throw new RangeError(`no density cells available for grid level ${gridLevel}`)
@@ -105,9 +105,7 @@ export function buildGaiaDensityPlotModel(
     .domain([-extentKpc, extentKpc])
     .range([height - margin.bottom, margin.top])
 
-  const largestSourceCount = Math.max(1, ...selectedRecords.map((record) => record.sourceCount))
-
-  const opacityScale = scaleSqrt().domain([0, largestSourceCount]).range([0.15, 1]).clamp(true)
+  const opacityScale = createGaiaDensityOpacityScale(selectedRecords)
 
   function project(xKpc: number, yKpc: number): ScreenPosition {
     return {

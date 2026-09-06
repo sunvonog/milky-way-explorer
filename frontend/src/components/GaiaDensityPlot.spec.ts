@@ -1,5 +1,7 @@
 import { mount } from '@vue/test-utils'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
+
+import GalacticMapCanvas from './GalacticMapCanvas.vue'
 
 import type { DensityVisualizationRecord } from '@/domain/density'
 import GaiaDensityPlot from './GaiaDensityPlot.vue'
@@ -21,6 +23,14 @@ function densityCell(
     ...overrides,
   }
 }
+
+vi.mock('./GalacticMapCanvas.vue', () => ({
+  default: {
+    name: 'GalacticMapCanvas',
+    props: ['layers', 'extentKpc'],
+    template: '<div data-galactic-map-stub />',
+  },
+}))
 
 describe('GaiaDensityPlot', () => {
   it('renders one rectangle for each occupied density cell', () => {
@@ -164,5 +174,54 @@ describe('GaiaDensityPlot', () => {
     expect(label.text()).toContain('exploratory')
     expect(description.text()).toContain('S/N')
     expect(description.text()).toContain('less stable')
+  })
+
+  it('connects the selected density tier and full grid extent to WebGL', async () => {
+    const baseline = densityCell({ sourceCount: 10 })
+    const exploratory = densityCell({
+      distanceTier: 'exploratory',
+      sourceCount: 4,
+    })
+
+    const wrapper = mount(GaiaDensityPlot, {
+      props: {
+        records: [densityCell({ gridLevel: 2, cellSizeKpc: 20 }), baseline, exploratory],
+      },
+    })
+
+    const map = wrapper.getComponent(GalacticMapCanvas)
+
+    expect(map.props('extentKpc')).toBe(20)
+    expect(map.props('layers')).toEqual([
+      expect.objectContaining({
+        props: expect.objectContaining({
+          data: [baseline],
+        }),
+      }),
+      expect.objectContaining({
+        id: 'galactic-reference-points',
+      }),
+      expect.objectContaining({
+        id: 'galactic-reference-labels',
+      }),
+    ])
+
+    await wrapper.get('[data-density-quality-toggle]').setValue(true)
+
+    expect(map.props('layers')).toEqual([
+      expect.objectContaining({
+        props: expect.objectContaining({
+          data: [baseline, exploratory],
+        }),
+      }),
+      expect.objectContaining({
+        id: 'galactic-reference-points',
+      }),
+      expect.objectContaining({
+        id: 'galactic-reference-labels',
+      }),
+    ])
+
+    expect(map.props('extentKpc')).toBe(20)
   })
 })
