@@ -106,6 +106,9 @@ release. Prioritize them after the central map-to-object experience works.
 Implemented in the current checkout; this is a foundation, not the complete
 product experience:
 
+The owner reviewed and merged the WebGL foundation in PR #23. The local
+`main` checkout includes merge commit `4bd4b95` as of 2026-09-07.
+
 - identity naming catalogues → `stars.parquet` / `alias.parquet`;
 - PSCompPars ingestion and review sinks;
 - exact Gaia host retrieval (`refresh-gaia-hosts` + committed `gaia_hosts` snapshot);
@@ -163,8 +166,8 @@ Operational rules (target production layout; not automated in-repo yet):
 
 | Order | Milestone | Completion criteria |
 | --- | --- | --- |
-| Now | Close the WebGL foundation | Final browser acceptance covers navigation, reference markers, quality toggling, and reset; the existing PR is integrated. Align remaining product documentation with this direction. |
-| Next | Prove individual-star rendering | Export and publish a bounded real-star overview, render it on the existing WebGL foundation, and record representative desktop/laptop performance. Agree budgets and the next regional-detail step from evidence. |
+| Complete | WebGL foundation | The owner reviewed and merged PR #23. Remaining product-documentation alignment is tracked separately below. |
+| Proposed next PR | Publish and render a bounded Gaia star overview | Reuse the existing Gaia snapshot and coordinate processing; export and publish a reproducible, size-limited star overview; render it on the existing WebGL map with reference markers and distance-quality controls; record representative desktop/laptop performance. Agree the default point budget and any regional-detail follow-up from evidence. |
 | Then | First usable unified explorer | One main map combines background stars, highlighted hosts, references, and an optional density overlay. Clicking a host opens basic available information; returning to the map preserves context. Establish the path for named/curated highlights using supported identities and coordinates. |
 | Then | Search and object navigation | Search supported stars, aliases, and planets; highlight and animate focus to the associated star. Publish and serve the required metadata, provide useful star/system details, and handle missing positions or data explicitly. |
 | Then | Planetary-system and planet views | Show known planets, supported orbital motion, the estimated habitable zone, and planet details. Smooth Motion transitions connect these views with the main map. Scientific and illustrative information is clearly distinguished. |
