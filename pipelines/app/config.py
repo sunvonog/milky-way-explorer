@@ -37,6 +37,10 @@ class Settings(BaseSettings):
     gaia_density_grid_sizes: tuple[int, ...] = (128,)
     gaia_density_extent_kpc: float = Field(default=20.0, gt=0)
 
+    gaia_overview_max_points: int = Field(default=100_000, gt=0)
+    gaia_overview_seed: int = Field(default=42, ge=0)
+    gaia_overview_extent_kpc: float = Field(default=20.0, gt=0, allow_inf_nan=False)
+
     @property
     def raw_root(self) -> Path:
         return self.data_root / "raw"

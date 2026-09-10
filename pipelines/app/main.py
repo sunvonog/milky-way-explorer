@@ -11,6 +11,7 @@ Usage::
     uv run python -m app.main refresh-gaia-hosts        # maintainer-only Gaia host refresh
     uv run python -m app.main refresh-gaia-background   # maintainer-only Gaia background
     uv run python -m app.main build-gaia-density        # density Parquet + Arrow
+    uv run python -m app.main build-gaia-overview       # overview Arrow
     uv run python -m app.main publish-release --build-id local-001
 """
 
@@ -28,6 +29,7 @@ from app.flows.gaia import (
     refresh_gaia_background,
     refresh_gaia_hosts,
 )
+from app.flows.gaia_overview import build_gaia_overview_artifact
 from app.flows.identity import build_identity
 from app.flows.release import publish_current_release
 from app.flows.snapshots import refresh_snapshots
@@ -65,6 +67,7 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
             "refresh-gaia-hosts",
             "refresh-gaia-background",
             "build-gaia-density",
+            "build-gaia-overview",
             "publish-release",
         ],
         help="pipeline to run (default: build)",
@@ -115,6 +118,8 @@ def main(argv: list[str] | None = None) -> int:
             refresh_gaia_background()
         elif args.command == "build-gaia-density":
             build_gaia_density()
+        elif args.command == "build-gaia-overview":
+            build_gaia_overview_artifact()
         elif args.command == "publish-release":
             publish_current_release(build_id=args.build_id)
         else:
