@@ -4,6 +4,8 @@ from math import isfinite
 
 import polars as pl
 
+GAIA_OVERVIEW_SAMPLING_METHOD = "blake2b-64-v1"
+
 GAIA_OVERVIEW_COLUMNS = (
     "gaia_source_id",
     "galactocentric_x_kpc",

@@ -1,12 +1,15 @@
+import json
+from hashlib import sha256
 from pathlib import Path
 
 import polars as pl
 import pytest
 
-from app.artifacts import GAIA_OVERVIEW_FILENAME
+from app.artifacts import GAIA_OVERVIEW_FILENAME, GAIA_OVERVIEW_METADATA_FILENAME
 from app.config import override_settings
 from app.domain.gaia_overview import GAIA_OVERVIEW_COLUMNS
 from app.flows.gaia_overview import build_gaia_overview_artifact
+from app.sources.snapshot import snapshot_directory
 
 
 @pytest.mark.parametrize("max_points", [1, 10])
@@ -15,7 +18,7 @@ def test_overview_round_trip(isolated_data_root: Path, max_points: int) -> None:
         gaia_overview_max_points=max_points, gaia_overview_seed=42, gaia_overview_extent_kpc=20.0
     )
 
-    batches = isolated_data_root / "raw" / "gaia_background" / "current" / "batches"
+    batches = isolated_data_root / "snapshot-input" / "batches"
     batches.mkdir(parents=True)
 
     (batches / "gaia-background-0001.csv").write_text(
@@ -27,8 +30,43 @@ def test_overview_round_trip(isolated_data_root: Path, max_points: int) -> None:
         encoding="utf-8",
     )
 
+    snapshot = snapshot_directory(
+        batches.parent,
+        "gaia_background",
+        isolated_data_root / "raw",
+        origin="test fixture",
+        fetched_online=False,
+    )
+
     path = build_gaia_overview_artifact()
     records = pl.read_ipc(path)
+
+    metadata = json.loads(
+        path.with_name(GAIA_OVERVIEW_METADATA_FILENAME).read_text(encoding="utf-8")
+    )
+    source_metadata = json.loads((snapshot / "snapshot.json").read_text(encoding="utf-8"))
+
+    assert metadata["schema_version"] == 1
+    assert metadata["artifact"] == {
+        "filename": path.name,
+        "sha256": sha256(path.read_bytes()).hexdigest(),
+    }
+    assert metadata["source"] == {
+        "name": "gaia_background",
+        "snapshot_sha256": source_metadata["sha256"],
+    }
+    assert metadata["sampling"] == {"method": "blake2b-64-v1", "seed": 42, "max_points": max_points}
+    assert metadata["counts"] == {
+        "loaded": 4,
+        "invalid": 1,
+        "processed": 3,
+        "excluded": 1,
+        "eligible": 2,
+        "sampled_out": 2 - records.height,
+        "selected": records.height,
+    }
+
+    assert sum(metadata["selected_by_tier"].values()) == records.height
 
     assert path == isolated_data_root / "frontend" / GAIA_OVERVIEW_FILENAME
     assert records.columns == list(GAIA_OVERVIEW_COLUMNS)
